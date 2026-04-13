@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>推しまとめ</title>
+<style>
+body {
+  font-family: sans-serif;
+  background: #f5f5f5;
+  padding: 10px;
+}
+
+.card {
+  background: white;
+  padding: 10px;
+  margin: 10px 0;
+  border-radius: 15px;
+  box-shadow: 0 3px 8px rgba(0,0,0,0.1);
+}
+
+.song {
+  margin-left: 10px;
+}
+</style>
+</head>
+
+<body>
+
+<h1>🎤 推し歌枠まとめ</h1>
+<div id="app"></div>
+
+<script src="data.js"></script>
+<script>
+const app = document.getElementById("app");
+
+data.vtubers.forEach(v => {
+  const card = document.createElement("div");
+  card.className = "card";
+
+  card.innerHTML = `<h2>${v.name}</h2>`;
+
+  v.streams.forEach(s => {
+    const stream = document.createElement("div");
+    stream.innerHTML = `<h3>${s.date} ${s.title}</h3>`;
+
+    s.songs.forEach(song => {
+      const a = document.createElement("a");
+      a.href = song.url;
+      a.textContent = "・" + song.name;
+      a.className = "song";
+      a.target = "_blank";
+
+      stream.appendChild(a);
+      stream.appendChild(document.createElement("br"));
+    });
+
+    card.appendChild(stream);
+  });
+
+  app.appendChild(card);
+});
+</script>
+
+</body>
+</html>
