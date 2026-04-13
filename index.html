@@ -115,7 +115,7 @@ h1 {
 </div>
 
 <script>
-const API_KEY = "ここにあなたのAPIキー";
+const API_KEY = "AIzaSyDNqDI1bIEQpWahutCP_w3QpLoQvdcde78";
 
 const kaidaID = "UCo2N7C-Z91waaR6lF3LL_jw";
 const saegusaID = "UCOWcZ18VTiKq9xKSTnFj4eg";
@@ -125,4 +125,33 @@ function fetchIcon(channelId, imgId) {
     .then(res => res.json())
     .then(data => {
 
-      // 安全
+      console.log("APIレスポンス:", data);
+
+      if (!data.items || data.items.length === 0) {
+        console.log("❌ itemsなし:", channelId);
+        document.getElementById(imgId).src = "https://placehold.co/80x80";
+        return;
+      }
+
+      const url = data.items[0].snippet?.thumbnails?.medium?.url;
+
+      if (!url) {
+        console.log("❌ URLなし:", data);
+        document.getElementById(imgId).src = "https://placehold.co/80x80";
+        return;
+      }
+
+      document.getElementById(imgId).src = url;
+    })
+    .catch(err => {
+      console.log("通信エラー:", err);
+      document.getElementById(imgId).src = "https://placehold.co/80x80";
+    });
+}
+
+fetchIcon(kaidaID, "kaida-icon");
+fetchIcon(saegusaID, "saegusa-icon");
+</script>
+
+</body>
+</html>
