@@ -24,12 +24,12 @@ h1 {
   margin-top: 20px;
 }
 
-/* ===== カード本体 ===== */
+/* ===== カード ===== */
 .card {
   display: flex;
   align-items: flex-start;
   background: white;
-  padding: 20px; /* ← 余白増やして存在感UP */
+  padding: 20px;
   margin: 14px 0;
   border-radius: 16px;
   text-decoration: none;
@@ -60,27 +60,25 @@ h1 {
   object-fit: cover;
 }
 
-/* ===== 右側エリア（超重要） ===== */
+/* 右側 */
 .content {
   display: flex;
-  flex-direction: column; /* ← 縦並び */
+  flex-direction: column;
   flex: 1;
 }
 
-/* 名前 */
 .name {
   font-weight: bold;
   font-size: 16px;
 }
 
-/* 説明 */
 .desc {
   font-size: 12px;
   color: #666;
   margin-top: 4px;
 }
 
-/* ボタン群（必ず下に落とす） */
+/* ボタン群 */
 .links {
   margin-top: 12px;
   display: flex;
@@ -88,7 +86,6 @@ h1 {
   flex-wrap: wrap;
 }
 
-/* ボタン */
 .btn {
   padding: 6px 10px;
   border-radius: 12px;
@@ -100,7 +97,12 @@ h1 {
 
 .yt { background: #FF0000; }
 .x { background: #000; }
-.gray { background: #4DD7E3; }
+
+/* ★ここが修正ポイント */
+.gray {
+  background: #5a5a5a !important;
+  color: white;
+}
 </style>
 
 </head>
