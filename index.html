@@ -24,17 +24,17 @@ h1 {
   margin-top: 20px;
 }
 
-/* カード */
+/* ===== カード本体 ===== */
 .card {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   background: white;
-  padding: 14px;
-  margin: 10px 0;
-  border-radius: 14px;
+  padding: 20px; /* ← 余白増やして存在感UP */
+  margin: 14px 0;
+  border-radius: 16px;
   text-decoration: none;
   color: black;
-  box-shadow: 0 3px 10px rgba(0,0,0,0.08);
+  box-shadow: 0 6px 16px rgba(0,0,0,0.08);
   position: relative;
   overflow: hidden;
 }
@@ -51,33 +51,44 @@ h1 {
 .blue { background: linear-gradient(180deg,#4DD7E3,#2bb3c4); }
 .red { background: linear-gradient(180deg,#F03C31,#c81e1e); }
 
-/* 画像 */
+/* アイコン */
 .card img {
-  width: 64px;
-  height: 64px;
+  width: 70px;
+  height: 70px;
   border-radius: 50%;
-  margin-right: 12px;
+  margin-right: 16px;
   object-fit: cover;
 }
 
-/* テキスト */
-.name {
-  font-weight: bold;
+/* ===== 右側エリア（超重要） ===== */
+.content {
+  display: flex;
+  flex-direction: column; /* ← 縦並び */
+  flex: 1;
 }
 
+/* 名前 */
+.name {
+  font-weight: bold;
+  font-size: 16px;
+}
+
+/* 説明 */
 .desc {
   font-size: 12px;
   color: #666;
+  margin-top: 4px;
 }
 
-/* ボタン群 */
+/* ボタン群（必ず下に落とす） */
 .links {
-  margin-top: 8px;
+  margin-top: 12px;
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
 }
 
+/* ボタン */
 .btn {
   padding: 6px 10px;
   border-radius: 12px;
@@ -101,13 +112,13 @@ h1 {
 <h1>推しポータル</h1>
 
 <!-- 甲斐田 -->
-<a class="card" href="#">
+<div class="card">
 
   <div class="line blue"></div>
 
   <img src="https://placehold.co/80x80">
 
-  <div>
+  <div class="content">
 
     <div class="name">甲斐田 晴</div>
     <div class="desc">歌・雑談・ゲーム配信</div>
@@ -120,16 +131,16 @@ h1 {
 
   </div>
 
-</a>
+</div>
 
 <!-- 明那 -->
-<a class="card" href="#">
+<div class="card">
 
   <div class="line red"></div>
 
   <img src="https://placehold.co/80x80">
 
-  <div>
+  <div class="content">
 
     <div class="name">三枝 明那</div>
     <div class="desc">歌枠・ライブ・雑談</div>
@@ -142,7 +153,7 @@ h1 {
 
   </div>
 
-</a>
+</div>
 
 </div>
 
