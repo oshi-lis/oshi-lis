@@ -23,6 +23,73 @@ h1 {
   font-size: 26px;
   margin-top: 20px;
 }
+
+/* カード */
+.card {
+  display: flex;
+  align-items: center;
+  background: white;
+  padding: 14px;
+  margin: 10px 0;
+  border-radius: 14px;
+  text-decoration: none;
+  color: black;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.08);
+  position: relative;
+  overflow: hidden;
+}
+
+/* 左ライン */
+.line {
+  width: 6px;
+  height: 100%;
+  position: absolute;
+  left: 0;
+  top: 0;
+}
+
+.blue { background: linear-gradient(180deg,#4DD7E3,#2bb3c4); }
+.red { background: linear-gradient(180deg,#F03C31,#c81e1e); }
+
+/* 画像 */
+.card img {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  margin-right: 12px;
+  object-fit: cover;
+}
+
+/* テキスト */
+.name {
+  font-weight: bold;
+}
+
+.desc {
+  font-size: 12px;
+  color: #666;
+}
+
+/* ボタン群 */
+.links {
+  margin-top: 8px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.btn {
+  padding: 6px 10px;
+  border-radius: 12px;
+  text-decoration: none;
+  font-size: 12px;
+  color: white;
+  display: inline-block;
+}
+
+.yt { background: #FF0000; }
+.x { background: #000; }
+.gray { background: #4DD7E3; }
 </style>
 
 </head>
@@ -33,118 +100,50 @@ h1 {
 
 <h1>推しポータル</h1>
 
-<!-- カードエリア -->
+<!-- 甲斐田 -->
+<a class="card" href="#">
 
-<a href="#" style="
-  display:flex;
-  align-items:center;
-  background:white;
-  padding:14px;
-  margin:10px 0;
-  border-radius:14px;
-  text-decoration:none;
-  color:black;
-  box-shadow:0 3px 10px rgba(0,0,0,0.08);
-  position:relative;
-  overflow:hidden;
-">
+  <div class="line blue"></div>
 
-  <!-- 左ライン -->
-  <div style="
-    width:6px;
-    height:100%;
-    position:absolute;
-    left:0;
-    top:0;
-    background:linear-gradient(180deg,#4DD7E3,#2bb3c4);
-  "></div>
-
-  <img src="https://placehold.co/80x80" style="
-    width:64px;
-    height:64px;
-    border-radius:50%;
-    margin-right:12px;
-  ">
+  <img src="https://placehold.co/80x80">
 
   <div>
-    <div style="font-weight:bold;">甲斐田 晴</div>
-    <div style="font-size:12px;color:#666;">歌・雑談・ゲーム配信</div>
-<div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
 
-  <a href="https://www.youtube.com/" target="_blank"
-     style="padding:6px 10px;background:#FF0000;color:white;border-radius:12px;text-decoration:none;font-size:12px;">
-    YouTube
-  </a>
+    <div class="name">甲斐田 晴</div>
+    <div class="desc">歌・雑談・ゲーム配信</div>
 
-  <a href="https://x.com" target="_blank"
-     style="padding:6px 10px;background:#000;color:white;border-radius:12px;text-decoration:none;font-size:12px;">
-    X
-  </a>
+    <div class="links">
+      <a class="btn yt" href="https://www.youtube.com/" target="_blank">YouTube</a>
+      <a class="btn x" href="https://x.com" target="_blank">X</a>
+      <div class="btn gray">コンテンツ</div>
+    </div>
 
-  <div style="padding:6px 10px;background:#4DD7E3;color:white;border-radius:12px;font-size:12px;">
-    コンテンツ
-  </div>
-
-</div>
   </div>
 
 </a>
 
+<!-- 明那 -->
+<a class="card" href="#">
 
-<a href="#" style="
-  display:flex;
-  align-items:center;
-  background:white;
-  padding:14px;
-  margin:10px 0;
-  border-radius:14px;
-  text-decoration:none;
-  color:black;
-  box-shadow:0 3px 10px rgba(0,0,0,0.08);
-  position:relative;
-  overflow:hidden;
-">
+  <div class="line red"></div>
 
-  <!-- 左ライン -->
-  <div style="
-    width:6px;
-    height:100%;
-    position:absolute;
-    left:0;
-    top:0;
-    background:linear-gradient(180deg,#F03C31,#c81e1e);
-  "></div>
-
-  <img src="https://placehold.co/80x80" style="
-    width:64px;
-    height:64px;
-    border-radius:50%;
-    margin-right:12px;
-  ">
+  <img src="https://placehold.co/80x80">
 
   <div>
-    <div style="font-weight:bold;">三枝 明那</div>
-    <div style="font-size:12px;color:#666;">歌枠・ライブ・雑談</div>
-<div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
 
-  <a href="https://www.youtube.com/@saegusaakina" target="_blank"
-     style="padding:6px 10px;background:#FF0000;color:white;border-radius:12px;text-decoration:none;font-size:12px;">
-    YouTube
-  </a>
+    <div class="name">三枝 明那</div>
+    <div class="desc">歌枠・ライブ・雑談</div>
 
-  <a href="https://x.com" target="_blank"
-     style="padding:6px 10px;background:#000;color:white;border-radius:12px;text-decoration:none;font-size:12px;">
-    X
-  </a>
+    <div class="links">
+      <a class="btn yt" href="https://www.youtube.com/@saegusaakina" target="_blank">YouTube</a>
+      <a class="btn x" href="https://x.com" target="_blank">X</a>
+      <div class="btn gray">コンテンツ</div>
+    </div>
 
-  <div style="padding:6px 10px;background:#F03C31;color:white;border-radius:12px;font-size:12px;">
-    コンテンツ
-  </div>
-
-</div>
   </div>
 
 </a>
+
 </div>
 
 </body>
