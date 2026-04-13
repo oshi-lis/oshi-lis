@@ -24,7 +24,7 @@ h1 {
   font-size: 26px;
 }
 
-/* カード本体 */
+/* カード */
 .card {
   display: flex;
   align-items: center;
@@ -44,7 +44,7 @@ h1 {
   transform: scale(1.02);
 }
 
-/* 左グラデライン */
+/* グラデライン */
 .card::before {
   content: "";
   position: absolute;
@@ -54,17 +54,15 @@ h1 {
   height: 100%;
 }
 
-/* 甲斐田（青グラデ） */
 .kaida::before {
   background: linear-gradient(180deg, #4DD7E3, #2bb3c4);
 }
 
-/* 三枝（赤グラデ） */
 .saegusa::before {
   background: linear-gradient(180deg, #F03C31, #c81e1e);
 }
 
-/* アイコン */
+/* 画像 */
 .card img {
   width: 64px;
   height: 64px;
@@ -72,6 +70,7 @@ h1 {
   object-fit: cover;
   margin-right: 15px;
   border: 1px solid #eee;
+  background: #ddd;
 }
 
 /* テキスト */
@@ -95,18 +94,18 @@ h1 {
 
 <h1>推しリスト</h1>
 
-<!-- 甲斐田晴 -->
+<!-- 甲斐田 -->
 <a class="card kaida" href="oshi-kaida.html">
-  <img src="https://yt3.googleusercontent.com/UCo2N7C-Z91waaR6lF3LL_jw=s176-c-k-c0x00ffffff-no-rj">
+  <img id="kaida-icon">
   <div>
     <div class="name">甲斐田 晴</div>
     <div class="desc">歌・雑談・ゲーム配信</div>
   </div>
 </a>
 
-<!-- 三枝明那 -->
+<!-- 三枝 -->
 <a class="card saegusa" href="oshi-saegusa.html">
-  <img src="https://yt3.googleusercontent.com/UCOWcZ18VTiKq9xKSTnFj4eg=s176-c-k-c0x00ffffff-no-rj">
+  <img id="saegusa-icon">
   <div>
     <div class="name">三枝 明那</div>
     <div class="desc">歌・雑談・ゲーム配信</div>
@@ -114,6 +113,28 @@ h1 {
 </a>
 
 </div>
+
+<script>
+const API_KEY = "AIzaSyAhz5t0MJUGT_vx6p2m4rjOlqfu71PSpiE";
+
+const kaidaID = "UCo2N7C-Z91waaR6lF3LL_jw";
+const saegusaID = "UCOWcZ18VTiKq9xKSTnFj4eg";
+
+function fetchIcon(channelId, imgId) {
+  fetch(`https://www.googleapis.com/youtube/v3/channels?part=snippet&id=${channelId}&key=${API_KEY}`)
+    .then(res => res.json())
+    .then(data => {
+      const url = data.items[0].snippet.thumbnails.medium.url;
+      document.getElementById(imgId).src = url;
+    })
+    .catch(err => {
+      console.log("API error", err);
+    });
+}
+
+fetchIcon(kaidaID, "kaida-icon");
+fetchIcon(saegusaID, "saegusa-icon");
+</script>
 
 </body>
 </html>
