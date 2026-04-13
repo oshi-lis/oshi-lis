@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>推しリスト</title>
+<title>推しポータル</title>
 
 <style>
 body {
@@ -13,9 +13,9 @@ body {
 }
 
 .container {
-  max-width: 900px;
+  max-width: 1100px;
   margin: 0 auto;
-  padding: 20px;
+  padding: 24px;
 }
 
 h1 {
@@ -24,23 +24,47 @@ h1 {
   font-size: 26px;
 }
 
+/* カード本体 */
 .card {
   display: flex;
   align-items: center;
   background: white;
   margin: 12px 0;
-  padding: 12px 16px;
+  padding: 14px 16px;
   border-radius: 14px;
   text-decoration: none;
   color: black;
   box-shadow: 0 3px 10px rgba(0,0,0,0.08);
   transition: 0.2s;
+  position: relative;
+  overflow: hidden;
 }
 
 .card:hover {
   transform: scale(1.02);
 }
 
+/* 左グラデライン */
+.card::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 6px;
+  height: 100%;
+}
+
+/* 甲斐田（青グラデ） */
+.kaida::before {
+  background: linear-gradient(180deg, #4DD7E3, #2bb3c4);
+}
+
+/* 三枝（赤グラデ） */
+.saegusa::before {
+  background: linear-gradient(180deg, #F03C31, #c81e1e);
+}
+
+/* アイコン */
 .card img {
   width: 64px;
   height: 64px;
@@ -50,6 +74,7 @@ h1 {
   border: 1px solid #eee;
 }
 
+/* テキスト */
 .name {
   font-size: 18px;
   font-weight: bold;
@@ -68,11 +93,11 @@ h1 {
 
 <div class="container">
 
-<h1>推しポータル</h1>
+<h1>推しリスト</h1>
 
 <!-- 甲斐田晴 -->
-<a class="card" href="oshi-kaida.html">
-  <img src="https://yt3.googleusercontent.com/UCo2N7C-Z91waaR6lF3LL_jw=s176-c-k-c0x00ffffff-no-rj" alt="Kaida Haru">
+<a class="card kaida" href="oshi-kaida.html">
+  <img src="https://yt3.googleusercontent.com/UCo2N7C-Z91waaR6lF3LL_jw=s176-c-k-c0x00ffffff-no-rj">
   <div>
     <div class="name">甲斐田 晴</div>
     <div class="desc">歌・雑談・ゲーム配信</div>
@@ -80,11 +105,11 @@ h1 {
 </a>
 
 <!-- 三枝明那 -->
-<a class="card" href="oshi-saegusa.html">
-  <img src="https://yt3.googleusercontent.com/UCOWcZ18VTiKq9xKSTnFj4eg=s176-c-k-c0x00ffffff-no-rj" alt="Saegusa Akina">
+<a class="card saegusa" href="oshi-saegusa.html">
+  <img src="https://yt3.googleusercontent.com/UCOWcZ18VTiKq9xKSTnFj4eg=s176-c-k-c0x00ffffff-no-rj">
   <div>
     <div class="name">三枝 明那</div>
-    <div class="desc">歌・雑談・ゲーム</div>
+    <div class="desc">歌・雑談・ゲーム配信</div>
   </div>
 </a>
 
