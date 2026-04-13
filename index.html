@@ -44,7 +44,7 @@ h1 {
   transform: scale(1.02);
 }
 
-/* グラデライン */
+/* 左グラデ */
 .card::before {
   content: "";
   position: absolute;
@@ -92,11 +92,11 @@ h1 {
 
 <div class="container">
 
-<h1>推しリスト</h1>
+<h1>推しポータル</h1>
 
 <!-- 甲斐田 -->
 <a class="card kaida" href="oshi-kaida.html">
-  <img id="kaida-icon">
+  <img id="kaida-icon" src="https://placehold.co/80x80">
   <div>
     <div class="name">甲斐田 晴</div>
     <div class="desc">歌・雑談・ゲーム配信</div>
@@ -105,17 +105,17 @@ h1 {
 
 <!-- 三枝 -->
 <a class="card saegusa" href="oshi-saegusa.html">
-  <img id="saegusa-icon">
+  <img id="saegusa-icon" src="https://placehold.co/80x80">
   <div>
     <div class="name">三枝 明那</div>
-    <div class="desc">歌・雑談・ゲーム配信</div>
+    <div class="desc">歌枠・ライブ・雑談</div>
   </div>
 </a>
 
 </div>
 
 <script>
-const API_KEY = "AIzaSyDNqDI1bIEQpWahutCP_w3QpLoQvdcde78";
+const API_KEY = "ここにあなたのAPIキー";
 
 const kaidaID = "UCo2N7C-Z91waaR6lF3LL_jw";
 const saegusaID = "UCOWcZ18VTiKq9xKSTnFj4eg";
@@ -124,17 +124,5 @@ function fetchIcon(channelId, imgId) {
   fetch(`https://www.googleapis.com/youtube/v3/channels?part=snippet&id=${channelId}&key=${API_KEY}`)
     .then(res => res.json())
     .then(data => {
-      const url = data.items[0].snippet.thumbnails.medium.url;
-      document.getElementById(imgId).src = url;
-    })
-    .catch(err => {
-      console.log("API error", err);
-    });
-}
 
-fetchIcon(kaidaID, "kaida-icon");
-fetchIcon(saegusaID, "saegusa-icon");
-</script>
-
-</body>
-</html>
+      // 安全
