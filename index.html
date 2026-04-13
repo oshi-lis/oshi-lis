@@ -7,28 +7,53 @@
 <style>
 body {
   font-family: sans-serif;
-  background: #f2f2f7;
+  background: #f4f5f7;
   margin: 0;
+  padding: 0;
+}
+
+/* 全体中央寄せ */
+.container {
+  max-width: 900px;
+  margin: 0 auto;
   padding: 20px;
 }
 
 h1 {
   text-align: center;
+  margin-bottom: 20px;
 }
 
+/* カード */
 .card {
+  display: flex;
+  align-items: center;
   background: white;
-  padding: 16px;
-  border-radius: 16px;
   margin: 12px 0;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  padding: 12px;
+  border-radius: 14px;
   text-decoration: none;
   color: black;
-  display: block;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.08);
+  transition: 0.2s;
 }
 
 .card:hover {
-  background: #f0f0f0;
+  transform: scale(1.02);
+}
+
+/* アイコン */
+.card img {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  margin-right: 15px;
+}
+
+/* 名前 */
+.name {
+  font-size: 18px;
+  font-weight: bold;
 }
 </style>
 
@@ -36,15 +61,21 @@ h1 {
 
 <body>
 
-<h1>🎤 推しポータルサイト</h1>
+<div class="container">
+
+<h1>推しポータル</h1>
 
 <a class="card" href="oshi-kaida.html">
-  🧑 甲斐田晴
+  <img src="https://yt3.googleusercontent.com/ytc/AIdro_kx9example1=s176-c-k-c0x00ffffff-no-rj" alt="">
+  <div class="name">甲斐田 晴</div>
 </a>
 
 <a class="card" href="oshi-saegusa.html">
-  🧑 三枝明那
+  <img src="https://yt3.googleusercontent.com/ytc/AIdro_kx9example2=s176-c-k-c0x00ffffff-no-rj" alt="">
+  <div class="name">三枝 明那</div>
 </a>
+
+</div>
 
 </body>
 </html>
