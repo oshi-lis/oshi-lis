@@ -2,72 +2,49 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>推し歌枠まとめ</title>
+<title>推しポータル</title>
 
 <style>
 body {
   font-family: sans-serif;
-  background: #f5f5f5;
-  padding: 10px;
+  background: #f2f2f7;
+  margin: 0;
+  padding: 20px;
+}
+
+h1 {
+  text-align: center;
 }
 
 .card {
   background: white;
-  padding: 10px;
-  margin: 10px 0;
-  border-radius: 15px;
-  box-shadow: 0 3px 8px rgba(0,0,0,0.1);
+  padding: 16px;
+  border-radius: 16px;
+  margin: 12px 0;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  text-decoration: none;
+  color: black;
+  display: block;
 }
 
-a {
-  display: block;
-  margin: 5px 0;
-  text-decoration: none;
-  color: #333;
+.card:hover {
+  background: #f0f0f0;
 }
 </style>
+
 </head>
 
 <body>
 
-<h1>🎤 歌枠まとめ（自動）</h1>
-<div id="app"></div>
+<h1>🎤 推しポータルサイト</h1>
 
-<script>
-const API_KEY = "AIzaSyAhz5t0MJUGT_vx6p2m4rjOlqfu71PSpiE";
-const PLAYLIST_ID = "PLx-_eOhARNk8pwlFyLcgFv6iAKFeni2Bd";
+<a class="card" href="oshi-kaida.html">
+  🧑 甲斐田晴
+</a>
 
-const app = document.getElementById("app");
-
-async function loadPlaylist() {
-  const url =
-    `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&maxResults=10&playlistId=${PLAYLIST_ID}&key=${API_KEY}`;
-
-  const res = await fetch(url);
-  const data = await res.json();
-
-  const card = document.createElement("div");
-  card.className = "card";
-
-  card.innerHTML = "<h2>🎤 歌枠プレイリスト</h2>";
-
-  data.items.forEach(item => {
-    const title = item.snippet.title;
-    const videoId = item.snippet.resourceId.videoId;
-
-    const link = document.createElement("a");
-    link.href = `https://www.youtube.com/watch?v=${videoId}`;
-    link.target = "_blank";
-    link.textContent = "・" + title;
-
-    card.appendChild(link);
-  });
-
-  app.appendChild(card);
-}
-
-loadPlaylist();
-</script>
+<a class="card" href="oshi-saegusa.html">
+  🧑 三枝明那
+</a>
 
 </body>
 </html>
