@@ -12,16 +12,18 @@ body {
   padding: 0;
 }
 
-/* 全体中央寄せ */
+/* 中央寄せコンテナ */
 .container {
   max-width: 900px;
   margin: 0 auto;
   padding: 20px;
 }
 
+/* タイトル */
 h1 {
   text-align: center;
   margin-bottom: 20px;
+  font-size: 26px;
 }
 
 /* カード */
@@ -30,7 +32,7 @@ h1 {
   align-items: center;
   background: white;
   margin: 12px 0;
-  padding: 12px;
+  padding: 12px 16px;
   border-radius: 14px;
   text-decoration: none;
   color: black;
@@ -42,18 +44,26 @@ h1 {
   transform: scale(1.02);
 }
 
-/* アイコン */
+/* 画像 */
 .card img {
-  width: 60px;
-  height: 60px;
+  width: 64px;
+  height: 64px;
   border-radius: 50%;
+  object-fit: cover;
   margin-right: 15px;
+  border: 1px solid #eee;
 }
 
 /* 名前 */
 .name {
   font-size: 18px;
   font-weight: bold;
+}
+
+.desc {
+  font-size: 12px;
+  color: #666;
+  margin-top: 2px;
 }
 </style>
 
@@ -65,14 +75,22 @@ h1 {
 
 <h1>推しポータル</h1>
 
+<!-- 甲斐田晴 -->
 <a class="card" href="oshi-kaida.html">
-  <img src="https://yt3.googleusercontent.com/ytc/AIdro_kx9example1=s176-c-k-c0x00ffffff-no-rj" alt="">
-  <div class="name">甲斐田 晴</div>
+  <img src="https://yt3.googleusercontent.com/ytc/AIdro_kQ4exampleKaida=s176-c-k-c0x00ffffff-no-rj" alt="Kaida Haru">
+  <div>
+    <div class="name">甲斐田 晴</div>
+    <div class="desc">歌・雑談・ゲーム配信</div>
+  </div>
 </a>
 
+<!-- 三枝明那 -->
 <a class="card" href="oshi-saegusa.html">
-  <img src="https://yt3.googleusercontent.com/ytc/AIdro_kx9example2=s176-c-k-c0x00ffffff-no-rj" alt="">
-  <div class="name">三枝 明那</div>
+  <img src="https://yt3.googleusercontent.com/ytc/AIdro_kQ4exampleSaegusa=s176-c-k-c0x00ffffff-no-rj" alt="Saegusa Akina">
+  <div>
+    <div class="name">三枝 明那</div>
+    <div class="desc">歌枠・ライブ・雑談</div>
+  </div>
 </a>
 
 </div>
