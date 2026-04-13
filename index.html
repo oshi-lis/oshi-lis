@@ -2,7 +2,8 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>推しまとめ</title>
+<title>推し歌枠まとめ</title>
+
 <style>
 body {
   font-family: sans-serif;
@@ -18,47 +19,54 @@ body {
   box-shadow: 0 3px 8px rgba(0,0,0,0.1);
 }
 
-.song {
-  margin-left: 10px;
+a {
+  display: block;
+  margin: 5px 0;
+  text-decoration: none;
+  color: #333;
 }
 </style>
 </head>
 
 <body>
 
-<h1>🎤 推し歌枠まとめ</h1>
+<h1>🎤 歌枠まとめ（自動）</h1>
 <div id="app"></div>
 
-<script src="data.js"></script>
 <script>
+const API_KEY = "ここにAPIキー";
+const PLAYLIST_ID = "PLx-_eOhARNk8pwlFyLcgFv6iAKFeni2Bd";
+
 const app = document.getElementById("app");
 
-data.vtubers.forEach(v => {
+async function loadPlaylist() {
+  const url =
+    `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&maxResults=10&playlistId=${PLAYLIST_ID}&key=${API_KEY}`;
+
+  const res = await fetch(url);
+  const data = await res.json();
+
   const card = document.createElement("div");
   card.className = "card";
 
-  card.innerHTML = `<h2>${v.name}</h2>`;
+  card.innerHTML = "<h2>🎤 歌枠プレイリスト</h2>";
 
-  v.streams.forEach(s => {
-    const stream = document.createElement("div");
-    stream.innerHTML = `<h3>${s.date} ${s.title}</h3>`;
+  data.items.forEach(item => {
+    const title = item.snippet.title;
+    const videoId = item.snippet.resourceId.videoId;
 
-    s.songs.forEach(song => {
-      const a = document.createElement("a");
-      a.href = song.url;
-      a.textContent = "・" + song.name;
-      a.className = "song";
-      a.target = "_blank";
+    const link = document.createElement("a");
+    link.href = `https://www.youtube.com/watch?v=${videoId}`;
+    link.target = "_blank";
+    link.textContent = "・" + title;
 
-      stream.appendChild(a);
-      stream.appendChild(document.createElement("br"));
-    });
-
-    card.appendChild(stream);
+    card.appendChild(link);
   });
 
   app.appendChild(card);
-});
+}
+
+loadPlaylist();
 </script>
 
 </body>
