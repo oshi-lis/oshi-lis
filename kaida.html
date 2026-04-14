@@ -166,9 +166,11 @@ async function loadArchive() {
     .slice(0, 6);
 
 const list = videos.map(v =>
-  `<li style="display:flex;gap:10px;align-items:center;">
-    <img src="${v.thumbnail}" style="width:120px;border-radius:8px;">
-    <a href="${v.link}" target="_blank">${v.title}</a>
+  `<li style="margin-bottom:12px;">
+    <img src="${v.thumbnail}" style="width:100%;border-radius:10px;">
+    <div style="margin-top:6px;">
+      <a href="${v.link}" target="_blank">${v.title}</a>
+    </div>
   </li>`
 ).join("");
   document.getElementById("content").innerHTML = "<ul>" + list + "</ul>";
