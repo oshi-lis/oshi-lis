@@ -64,14 +64,14 @@ h1 {
 
 /* 左ライン */
 .line {
-  width: 6px;
+  width: 10px;          /* ←太くする */
   position: absolute;
 
-  left: 8px;   
+  left: 0;              /* ←外側ぴったり */
   top: 0;
   bottom: 0;
 
-  border-radius: 6px;
+  border-radius: 6px 0 0 6px; /* ←左だけ丸くして馴染ませる */
 }
 
 /* アイコン */
