@@ -165,10 +165,12 @@ async function loadArchive() {
     .filter(v => !v.link.includes("shorts"))
     .slice(0, 6);
 
-  const list = videos.map(v =>
-    `<li><a href="${v.link}" target="_blank">${v.title}</a></li>`
-  ).join("");
-
+const list = videos.map(v =>
+  `<li style="display:flex;gap:10px;align-items:center;">
+    <img src="${v.thumbnail}" style="width:120px;border-radius:8px;">
+    <a href="${v.link}" target="_blank">${v.title}</a>
+  </li>`
+).join("");
   document.getElementById("content").innerHTML = "<ul>" + list + "</ul>";
 }
 
