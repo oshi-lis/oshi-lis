@@ -140,6 +140,34 @@ h1 {
   background: #9a9a9a !important;
   color: white;
 }
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 36px;
+  height: 36px;
+
+  border-radius: 10px;
+  background: #f2f4f7;
+
+  transition: transform 0.15s ease, background 0.2s ease;
+}
+
+.icon-btn img {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+}
+
+.icon-btn:hover {
+  transform: translateY(-2px);
+  background: #e9edf3;
+}
+
+.icon-btn:active {
+  transform: scale(0.95);
+}
 </style>
 
 </head>
