@@ -147,6 +147,20 @@ function showTab(e, type) {
 
 // 初期表示
 showTab({target: document.querySelector(".tab.active")}, "goods");
+async function loadArchive() {
+  const res = await fetch("https://api.rss2json.com/v1/api.json?rss_url=https://www.youtube.com/feeds/videos.xml?channel_id=UCo2N7C-Z91waaR6lF3LL_jw");
+  const data = await res.json();
+
+  const videos = data.items
+    .filter(v => !v.link.includes("shorts")) // ←ショート除外
+    .slice(0, 6);
+
+  const list = videos.map(v =>
+    `<li><a href="${v.link}" target="_blank">${v.title}</a></li>`
+  ).join("");
+
+  document.getElementById("content").innerHTML = "<ul>" + list + "</ul>";
+}
 </script>
 
 </body>
