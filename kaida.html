@@ -113,6 +113,7 @@ img {
 </div>
 
 <script>
+
 const data = {
   goods: [
     "誕生日グッズ2024",
@@ -133,10 +134,17 @@ const data = {
 };
 
 function showTab(e, type) {
+
   document.querySelectorAll(".tab").forEach(tab => {
     tab.classList.remove("active");
   });
   e.target.classList.add("active");
+
+  // 👇ここが追加ポイント！！！
+  if(type === "archive") {
+    loadArchive();
+    return;
+  }
 
   const content = document.getElementById("content");
   content.innerHTML =
@@ -147,12 +155,14 @@ function showTab(e, type) {
 
 // 初期表示
 showTab({target: document.querySelector(".tab.active")}, "goods");
+
+// 👇自動取得
 async function loadArchive() {
   const res = await fetch("https://api.rss2json.com/v1/api.json?rss_url=https://www.youtube.com/feeds/videos.xml?channel_id=UCo2N7C-Z91waaR6lF3LL_jw");
   const data = await res.json();
 
   const videos = data.items
-    .filter(v => !v.link.includes("shorts")) // ←ショート除外
+    .filter(v => !v.link.includes("shorts"))
     .slice(0, 6);
 
   const list = videos.map(v =>
@@ -161,6 +171,7 @@ async function loadArchive() {
 
   document.getElementById("content").innerHTML = "<ul>" + list + "</ul>";
 }
+
 </script>
 
 </body>
