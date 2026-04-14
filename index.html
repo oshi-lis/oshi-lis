@@ -48,33 +48,30 @@ h1 {
   display: flex;
   align-items: flex-start;
   background: #ffffff;
-  padding: 20px 
+  padding: 20px;
   margin: 0;
   border-radius: 18px;
 
   box-shadow: 0 8px 20px rgba(0,0,0,0.08);
   border: 1px solid rgba(0,0,0,0.05);
 
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
   width: 100%;
   box-sizing: border-box;
-position: relative;
+
+  position: relative;   
+  overflow: hidden;    
 }
 
 /* 左ライン */
 .line {
   width: 6px;
+  height: 100%;
   position: absolute;
-
-  left: 8px;
-  top: 8px;
-  bottom: 8px;
+  left: 0;
+  top: 0;
 
   border-radius: 6px;
 }
-
-.blue { background: linear-gradient(180deg,#4DD7E3,#2bb3c4); }
-.red { background: linear-gradient(180deg,#F03C31,#c81e1e); }
 
 /* アイコン */
 .card > img {
