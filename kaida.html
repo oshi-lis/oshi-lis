@@ -169,7 +169,9 @@ const list = videos.map(v =>
   `<li style="margin-bottom:12px;">
     <img src="${v.thumbnail}" style="width:100%;border-radius:10px;">
     <div style="margin-top:6px;">
-      <a href="${v.link}" target="_blank">${v.title}</a>
+      <a href="${v.link}" target="_blank" style="text-decoration:none;color:#222;">
+        ${v.title}
+      </a>
     </div>
   </li>`
 ).join("");
