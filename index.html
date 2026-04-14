@@ -145,28 +145,17 @@ h1 {
   align-items: center;
   justify-content: center;
 
-  width: 36px;
-  height: 36px;
+  width: 28px;
+  height: 28px;
 
-  border-radius: 10px;
-  background: #f2f4f7;
-
-  transition: transform 0.15s ease, background 0.2s ease;
+  background: none;   /* ←枠消す */
+  border-radius: 0;   /* ←角も消す */
+  padding: 0;
 }
 
 .icon-btn img {
-  width: 18px;
-  height: 18px;
-  object-fit: contain;
-}
-
-.icon-btn:hover {
-  transform: translateY(-2px);
-  background: #e9edf3;
-}
-
-.icon-btn:active {
-  transform: scale(0.95);
+  width: 24px;
+  height: 24px;
 }
 </style>
 
