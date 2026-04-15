@@ -2,64 +2,49 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>推しアーカイブ</title>
+<title>アーカイブ</title>
 
 <style>
 body {
   font-family: sans-serif;
   background: #f6f7fb;
   margin: 0;
-  padding: 20px;
-  color: #222;
+  padding: 0;
 }
 
-.card {
-  max-width: 900px;
-  margin: 0 auto;
+/* ===== UI ===== */
+.header {
+  text-align: center;
+  padding: 20px;
   background: white;
-  border-radius: 16px;
-  padding: 20px;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.1);
 }
 
-/* ===== ヘッダー ===== */
-.top {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  margin-bottom: 10px;
-}
-
-.top img {
+.header img {
   width: 80px;
   height: 80px;
   border-radius: 16px;
-  object-fit: cover;
 }
 
-.name {
-  font-size: 20px;
-  font-weight: bold;
-}
-
-.sub {
+.desc {
   font-size: 12px;
   color: #666;
 }
 
-/* ===== タブ ===== */
 .tabs {
   display: flex;
+  justify-content: center;
   gap: 10px;
-  margin-top: 15px;
+  background: white;
+  padding: 10px;
+  border-top: 1px solid #eee;
 }
 
 .tab {
   padding: 6px 12px;
   background: #eee;
   border-radius: 8px;
-  font-size: 13px;
   cursor: pointer;
+  font-size: 13px;
 }
 
 .tab.active {
@@ -67,14 +52,8 @@ body {
   color: white;
 }
 
-/* ===== グリッド ===== */
-.section {
-  margin-top: 20px;
-}
-
-.section h3 {
-  font-size: 14px;
-  margin-bottom: 10px;
+.content {
+  padding: 20px;
 }
 
 .video-grid {
@@ -87,45 +66,44 @@ body {
   width: 100%;
   aspect-ratio: 16/9;
   border-radius: 8px;
-  object-fit: cover;
-}
-
-.title {
-  font-size: 11px;
-  margin-top: 4px;
-  line-height: 1.3;
 }
 </style>
 </head>
 
 <body>
 
-<div class="card">
-
-  <!-- ===== ヘッダー復活 ===== -->
-  <div class="top">
-    <img src="images/kaida.png">
-    <div>
-      <div class="name">推しまとめ</div>
-      <div class="sub">アーカイブ・動画分類</div>
-    </div>
-  </div>
-
-  <!-- ===== タブ ===== -->
-  <div class="tabs">
-    <div class="tab active" onclick="load()">アーカイブ更新</div>
-  </div>
-
-  <div id="content">loading...</div>
-
+<div class="header">
+  <img src="images/kaida.png">
+  <div class="desc">(グッズ)(アーカイブ)(歌枠)(お知らせ)</div>
 </div>
+
+<div class="tabs">
+  <div class="tab" data-tab="archive">アーカイブ</div>
+  <div class="tab" data-tab="goods">グッズ</div>
+  <div class="tab" data-tab="live">歌枠</div>
+  <div class="tab" data-tab="info">お知らせ</div>
+</div>
+
+<div class="content" id="content">loading...</div>
 
 <script>
 
 const CHANNEL_ID = "UCo2N7C-Z91waaR6lF3LL_jw";
 const API_KEY = "AIzaSyDNqDI1bIEQpWahutCP_w3QpLoQvdcde78";
 
-/* ========================= */
+/* ===== 保存 ===== */
+function setTab(tab) {
+  localStorage.setItem("activeTab", tab);
+  loadTab(tab);
+}
+
+/* ===== 復元 ===== */
+window.addEventListener("load", () => {
+  const tab = localStorage.getItem("activeTab") || "archive";
+  loadTab(tab);
+});
+
+/* ===== 秒変換 ===== */
 function parseDuration(d) {
   if (!d) return 0;
   const m = d.match(/PT(?:(\d+)M)?(?:(\d+)S)?/);
@@ -133,15 +111,13 @@ function parseDuration(d) {
   return (Number(m[1] || 0) * 60) + Number(m[2] || 0);
 }
 
-/* ========================= */
+/* ===== Shorts ===== */
 function isShort(v) {
-  const sec = parseDuration(v.contentDetails?.duration);
-  return sec > 0 && sec <= 60;
+  return parseDuration(v.contentDetails?.duration) <= 60;
 }
 
-/* ========================= */
+/* ===== Live（安定版） ===== */
 function isLive(v) {
-
   const title = (v.snippet?.title || "").toLowerCase();
   const sec = parseDuration(v.contentDetails?.duration);
 
@@ -151,12 +127,20 @@ function isLive(v) {
     title.includes("live") ||
     title.includes("歌枠") ||
     title.includes("雑談") ||
-    sec >= 1800
+    sec >= 3600
   );
 }
 
-/* ========================= */
-async function load() {
+/* ===== タブ切替 ===== */
+function loadTab(tab) {
+  document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+  document.querySelector(`[data-tab="${tab}"]`)?.classList.add("active");
+
+  if (tab === "archive") loadArchive();
+}
+
+/* ===== アーカイブ ===== */
+async function loadArchive() {
 
   const el = document.getElementById("content");
   el.innerHTML = "loading...";
@@ -165,8 +149,7 @@ async function load() {
     `https://www.googleapis.com/youtube/v3/channels?part=contentDetails&id=${CHANNEL_ID}&key=${API_KEY}`
   ).then(r => r.json());
 
-  const uploads =
-    ch?.items?.[0]?.contentDetails?.relatedPlaylists?.uploads;
+  const uploads = ch?.items?.[0]?.contentDetails?.relatedPlaylists?.uploads;
 
   const pl = await fetch(
     `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet,contentDetails&playlistId=${uploads}&maxResults=50&key=${API_KEY}`
@@ -193,13 +176,9 @@ async function load() {
 
   const html = (v) => {
     const id = v.id;
-    const t = v.snippet?.title || "";
     return `
       <div>
-        <div class="thumb">
-          <img src="https://i.ytimg.com/vi/${id}/hqdefault.jpg">
-        </div>
-        <div class="title">${t}</div>
+        <img src="https://i.ytimg.com/vi/${id}/hqdefault.jpg">
       </div>
     `;
   };
@@ -209,60 +188,29 @@ async function load() {
     const title = (v.snippet?.title || "").toLowerCase();
     const card = html(v);
 
-    /* ===== 1本化ルール ===== */
-
     if (isShort(v)) return g.shorts.push(card);
     if (isLive(v)) return g.live.push(card);
 
-    if (title.includes("切り抜き"))
-      return g.clip.push(card);
-
-    if (title.includes("歌ってみた"))
-      return g.uta.push(card);
+    if (title.includes("切り抜き")) return g.clip.push(card);
+    if (title.includes("歌ってみた")) return g.uta.push(card);
 
     if (
       title.includes("オリジナル") ||
       title.includes("mv") ||
-      title.includes("試聴") ||
-      title.includes("teaser") ||
-      title.includes("sample")
-    ) {
-      return g.original.push(card);
-    }
+      title.includes("試聴")
+    ) return g.original.push(card);
 
-    /* ★完全吸収 */
     return g.original.push(card);
   });
 
   el.innerHTML = `
-    <div class="section">
-      <h3>ライブ</h3>
-      <div class="video-grid">${g.live.join("")}</div>
-    </div>
-
-    <div class="section">
-      <h3>歌ってみた</h3>
-      <div class="video-grid">${g.uta.join("")}</div>
-    </div>
-
-    <div class="section">
-      <h3>オリ曲 / 試聴</h3>
-      <div class="video-grid">${g.original.join("")}</div>
-    </div>
-
-    <div class="section">
-      <h3>切り抜き</h3>
-      <div class="video-grid">${g.clip.join("")}</div>
-    </div>
-
-    <div class="section">
-      <h3>ショート</h3>
-      <div class="video-grid">${g.shorts.join("")}</div>
-    </div>
+    <h3>ライブ</h3><div class="video-grid">${g.live.join("")}</div>
+    <h3>歌ってみた</h3><div class="video-grid">${g.uta.join("")}</div>
+    <h3>オリ曲 / 試聴</h3><div class="video-grid">${g.original.join("")}</div>
+    <h3>切り抜き</h3><div class="video-grid">${g.clip.join("")}</div>
+    <h3>ショート</h3><div class="video-grid">${g.shorts.join("")}</div>
   `;
 }
-
-load();
 
 </script>
 
