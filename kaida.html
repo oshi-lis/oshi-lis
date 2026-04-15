@@ -147,17 +147,46 @@ img {
 </div>
 
 <script>
-function showTab(event, type)
-showTab({target: document.querySelector(".tab")}, "goods");
-
 const CHANNEL_ID = "UCo2N7C-Z91waaR6lF3LL_jw";
 
+const data = {
+  goods: ["誕生日グッズ2024", "アクリルスタンド"],
+  song: ["歌枠まとめ", "アニソン歌枠"],
+  news: ["新衣装発表", "ライブ出演"]
+};
+
 /* =========================
-   アーカイブ取得（6件確認用）
+   タブ切り替え
+========================= */
+function showTab(event, type) {
+
+  // タブの見た目リセット
+  document.querySelectorAll(".tab").forEach(tab => {
+    tab.classList.remove("active");
+  });
+
+  if (event && event.target) {
+    event.target.classList.add("active");
+  }
+
+  // アーカイブだけ特別処理
+  if (type === "archive") {
+    loadArchive();
+    return;
+  }
+
+  // 通常表示
+  document.getElementById("content").innerHTML =
+    "<ul>" +
+    data[type].map(item => `<li>${item}</li>`).join("") +
+    "</ul>";
+}
+
+/* =========================
+   アーカイブ取得
 ========================= */
 async function loadArchive() {
 
-  // ===== 前：取得処理 =====
   const res = await fetch(
     "https://api.rss2json.com/v1/api.json?rss_url=" +
     encodeURIComponent(
@@ -167,21 +196,11 @@ async function loadArchive() {
 
   const json = await res.json();
 
-  // ★ここで確認（重要）
-  console.log("取得件数:", json.items?.length);
-
-  // ===== フィルタ処理 =====
   const filtered = (json.items || [])
     .filter(v => v && v.link && !v.link.includes("shorts"));
 
-  console.log("フィルタ後:", filtered.length);
-
-  // ===== 6件に制限 =====
   const videos = filtered.slice(0, 6);
 
-  console.log("最終表示:", videos.length);
-
-  // ===== 表示生成 =====
   const list = videos.map(v =>
     `<div class="video-card">
       <div class="thumb">
@@ -196,6 +215,12 @@ async function loadArchive() {
   document.getElementById("content").innerHTML =
     `<div class="video-grid">${list}</div>`;
 }
+
+/* =========================
+   初期表示
+========================= */
+showTab(null, "goods");
+ 
 
 </script>
 
