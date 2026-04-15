@@ -187,6 +187,8 @@ function showTab(event, type) {
 ========================= */
 async function loadArchive() {
 
+console.log("① loadArchive開始");
+
   const res = await fetch(
     "https://api.rss2json.com/v1/api.json?rss_url=" +
     encodeURIComponent(
