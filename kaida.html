@@ -129,7 +129,6 @@ const data = {
   news: ["新衣装発表","ライブ出演"]
 };
 
-/* ===== 重複防止 ===== */
 const seen = new Set();
 
 /* ===== タブ ===== */
@@ -165,7 +164,7 @@ function parseDuration(d){
 }
 
 /* ===== 全取得 ===== */
-async function getAllVideos(limit = 200){
+async function getAllVideos(limit = 100){
 
   const ch = await fetch(
     `https://www.googleapis.com/youtube/v3/channels?part=contentDetails&id=${CHANNEL_ID}&key=${API_KEY}`
@@ -220,13 +219,12 @@ async function load(){
 
   try{
 
-    const list = await getAllVideos(200);
+    const list = await getAllVideos(100);
     const ids = list.map(v=>v.snippet.resourceId.videoId);
     let videos = await getDetails(ids);
 
     let g = {live:[], song:[], original:[], clip:[], short:[]};
 
-    /* ★ 重複排除ここで効く */
     const classify = (arr)=>{
       arr.forEach(v=>{
 
@@ -247,17 +245,16 @@ async function load(){
 
     classify(videos);
 
-    /* 深掘り（必要な時だけ） */
     if(g.song.length < 12 || g.original.length < 12){
 
-      const extraList = await getAllVideos(500);
+      const extraList = await getAllVideos(300);
       const extraIds = extraList.map(v=>v.snippet.resourceId.videoId);
       const extraVideos = await getDetails(extraIds);
 
       classify(extraVideos);
     }
 
-    const render = arr => arr.slice(0,12).map(v=>`
+    const render = arr => arr.slice(0,6).map(v=>`
       <div class="thumb">
         <a href="https://www.youtube.com/watch?v=${v.id}" target="_blank">
           <img src="https://i.ytimg.com/vi/${v.id}/hqdefault.jpg">
