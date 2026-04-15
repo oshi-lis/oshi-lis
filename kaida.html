@@ -132,7 +132,7 @@ function parseDuration(d){
 }
 
 /* =========================
-   正規化（統一データ）
+   正規化
 ========================= */
 function normalizeVideo(v){
   return {
@@ -147,22 +147,17 @@ function normalizeVideo(v){
 }
 
 /* =========================
-   分類ルール（完全統一）
+   分類（完全分離・1動画1枠）
 ========================= */
 
-// ライブ（APIのみ）
-function isLive(v){
-  return v.liveStatus === "live" || v.liveStatus === "upcoming";
-}
-
-// ショート（ライブ除外＋60秒以下）
-function isShort(v){
-  return v.liveStatus === "none" && v.duration <= 60;
-}
-
-// 切り抜き
+// 切り抜き（最優先）
 function isClip(v){
   return v.title.includes("切り抜き") || v.title.includes("clip");
+}
+
+// オリ曲 / 試聴
+function isOriginal(v){
+  return v.title.includes("オリジナル") || v.title.includes("mv") || v.title.includes("試聴");
 }
 
 // 歌ってみた
@@ -170,9 +165,14 @@ function isSong(v){
   return v.title.includes("歌ってみた") || v.title.includes("cover");
 }
 
-// オリ曲・試聴
-function isOriginal(v){
-  return v.title.includes("オリジナル") || v.title.includes("mv") || v.title.includes("試聴");
+// ライブ
+function isLive(v){
+  return v.liveStatus === "live" || v.liveStatus === "upcoming";
+}
+
+// ショート（最後）
+function isShort(v){
+  return v.duration <= 60;
 }
 
 /* =========================
@@ -245,11 +245,12 @@ async function loadArchive(){
   videos.forEach(v=>{
     const nv = normalizeVideo(v);
 
-    if(isLive(nv)) return g.live.push(v);
-    if(isShort(nv)) return g.short.push(v);
+    // 完全分離（1動画＝1カテゴリ）
     if(isClip(nv)) return g.clip.push(v);
     if(isOriginal(nv)) return g.original.push(v);
     if(isSong(nv)) return g.song.push(v);
+    if(isLive(nv)) return g.live.push(v);
+    if(isShort(nv)) return g.short.push(v);
   });
 
   const render=a=>a.map(v=>`
