@@ -181,28 +181,33 @@ function render() {
 }
 
 /* =========================
-   Shorts判定（完全安定版）
+   安定Short判定（最終形）
 ========================= */
 function isShort(v) {
 
   const d = v.contentDetails?.duration;
 
-  // ★欠損ガード
-  if (!d) return false;
+  if (typeof d !== "string") return false;
 
   const m = d.match(/PT(?:(\d+)M)?(?:(\d+)S)?/);
   if (!m) return false;
 
-  const min = parseInt(m[1] || "0");
-  const sec = parseInt(m[2] || "0");
+  const total =
+    (Number(m[1] || 0) * 60) +
+    (Number(m[2] || 0));
 
-  const total = (min * 60) + sec;
-
-  return total <= 60;
+  return total > 0 && total <= 60;
 }
 
 /* =========================
-   アーカイブ
+   ライブ判定（必須）
+========================= */
+function isLive(v) {
+  return v?.snippet?.liveBroadcastContent === "live";
+}
+
+/* =========================
+   アーカイブ取得
 ========================= */
 async function loadArchive() {
 
@@ -268,6 +273,8 @@ async function loadArchive() {
       const title = v.snippet?.title || "";
       const card = html(v);
 
+      /* ★優先順位固定 */
+      if (isLive(v)) return groups.live.push(card);
       if (isShort(v)) return groups.shorts.push(card);
 
       if (match(title, ["切り抜き","clip","highlight","まとめ"]))
