@@ -153,7 +153,7 @@ function setTab(tab) {
 document.addEventListener("DOMContentLoaded", render);
 
 /* =========================
-   UI
+   UIデータ
 ========================= */
 const data = {
   goods: ["誕生日グッズ2024", "アクリルスタンド"],
@@ -181,33 +181,30 @@ function render() {
 }
 
 /* =========================
-   安定Short判定（最終形）
+   Shorts判定（安全版）
 ========================= */
 function isShort(v) {
 
   const d = v.contentDetails?.duration;
-
   if (typeof d !== "string") return false;
 
   const m = d.match(/PT(?:(\d+)M)?(?:(\d+)S)?/);
   if (!m) return false;
 
-  const total =
-    (Number(m[1] || 0) * 60) +
-    (Number(m[2] || 0));
+  const total = (Number(m[1] || 0) * 60) + Number(m[2] || 0);
 
   return total > 0 && total <= 60;
 }
 
 /* =========================
-   ライブ判定（必須）
+   ライブ判定（最優先）
 ========================= */
 function isLive(v) {
-  return v?.snippet?.liveBroadcastContent === "live";
+  return v?.snippet?.liveBroadcastContent !== "none";
 }
 
 /* =========================
-   アーカイブ取得
+   アーカイブ取得＆分類
 ========================= */
 async function loadArchive() {
 
@@ -240,13 +237,15 @@ async function loadArchive() {
 
     const videos = vd.items || [];
 
+    /* =========================
+       吸収型カテゴリ（otherなし）
+    ========================= */
     const groups = {
       live: [],
       uta: [],
       original: [],
       clip: [],
-      shorts: [],
-      other: []
+      shorts: []
     };
 
     const match = (t, list) =>
@@ -273,7 +272,10 @@ async function loadArchive() {
       const title = v.snippet?.title || "";
       const card = html(v);
 
-      /* ★優先順位固定 */
+      /* =========================
+         優先順位（絶対固定）
+      ========================= */
+
       if (isLive(v)) return groups.live.push(card);
       if (isShort(v)) return groups.shorts.push(card);
 
@@ -283,22 +285,19 @@ async function loadArchive() {
       if (match(title, ["歌ってみた","cover"]))
         return groups.uta.push(card);
 
-      if (match(title, ["オリジナル","original","mv","music video"]))
+      if (match(title, ["オリジナル","original","mv","music video","試聴"]))
         return groups.original.push(card);
 
-      if (match(title, ["配信","歌枠","ライブ","live","stream"]))
-        return groups.live.push(card);
-
-      groups.other.push(card);
+      /* ★other廃止 → オリ曲へ吸収 */
+      groups.original.push(card);
     });
 
     el.innerHTML = `
       <div><h3>ライブ</h3><div class="video-grid">${groups.live.join("")}</div></div>
       <div><h3>歌ってみた</h3><div class="video-grid">${groups.uta.join("")}</div></div>
-      <div><h3>オリジナル</h3><div class="video-grid">${groups.original.join("")}</div></div>
+      <div><h3>オリジナル / 試聴</h3><div class="video-grid">${groups.original.join("")}</div></div>
       <div><h3>切り抜き</h3><div class="video-grid">${groups.clip.join("")}</div></div>
       <div><h3>ショート</h3><div class="video-grid">${groups.shorts.join("")}</div></div>
-      <div><h3>その他</h3><div class="video-grid">${groups.other.join("")}</div></div>
     `;
 
   } catch (e) {
