@@ -42,9 +42,7 @@ body {
 const CHANNEL_ID = "UCo2N7C-Z91waaR6lF3LL_jw";
 const API_KEY = "AIzaSyDNqDI1bIEQpWahutCP_w3QpLoQvdcde78";
 
-/* =========================
-   duration → 秒変換
-========================= */
+/* ========================= */
 function parseDuration(d) {
   if (!d) return 0;
   const m = d.match(/PT(?:(\d+)M)?(?:(\d+)S)?/);
@@ -52,37 +50,29 @@ function parseDuration(d) {
   return (Number(m[1] || 0) * 60) + Number(m[2] || 0);
 }
 
-/* =========================
-   Shorts判定（安全）
-========================= */
+/* ========================= */
 function isShort(v) {
   const sec = parseDuration(v.contentDetails?.duration);
   return sec > 0 && sec <= 60;
 }
 
-/* =========================
-   ライブ判定（最終強化版）
-========================= */
+/* ========================= */
 function isLive(v) {
 
   const title = (v.snippet?.title || "").toLowerCase();
   const sec = parseDuration(v.contentDetails?.duration);
 
-  const keyword =
+  return (
     title.includes("配信") ||
     title.includes("ライブ") ||
     title.includes("live") ||
     title.includes("歌枠") ||
-    title.includes("雑談");
-
-  const longVideo = sec >= 1800; // 30分以上はライブ扱い
-
-  return keyword || longVideo;
+    title.includes("雑談") ||
+    sec >= 1800
+  );
 }
 
-/* =========================
-   main
-========================= */
+/* ========================= */
 async function load() {
 
   const el = document.getElementById("content");
@@ -111,11 +101,10 @@ async function load() {
 
   const g = {
     live: [],
-    shorts: [],
     uta: [],
     original: [],
     clip: [],
-    unknown: []
+    shorts: []
   };
 
   const html = (v) => {
@@ -136,29 +125,37 @@ async function load() {
     const title = (v.snippet?.title || "").toLowerCase();
     const card = html(v);
 
-    /* =========================
-       優先順位（絶対固定）
-    ========================= */
+    /* ========================= */
 
     if (isLive(v)) return g.live.push(card);
     if (isShort(v)) return g.shorts.push(card);
 
     if (title.includes("切り抜き")) return g.clip.push(card);
-    if (title.includes("歌ってみた")) return g.uta.push(card);
-    if (title.includes("オリジナル") || title.includes("mv"))
-      return g.original.push(card);
 
-    /* ★重要：オリ曲に絶対入れない */
-    return g.unknown.push(card);
+    if (title.includes("歌ってみた"))
+      return g.uta.push(card);
+
+    /* ★MV / 試聴は全部ここに統合 */
+    if (
+      title.includes("オリジナル") ||
+      title.includes("mv") ||
+      title.includes("試聴") ||
+      title.includes("teaser") ||
+      title.includes("sample")
+    ) {
+      return g.original.push(card);
+    }
+
+    /* ★完全吸収（オリ曲へ） */
+    return g.original.push(card);
   });
 
   el.innerHTML = `
     <h3>ライブ</h3><div class="video-grid">${g.live.join("")}</div>
     <h3>歌ってみた</h3><div class="video-grid">${g.uta.join("")}</div>
-    <h3>オリ曲 / MV</h3><div class="video-grid">${g.original.join("")}</div>
+    <h3>オリ曲 / 試聴</h3><div class="video-grid">${g.original.join("")}</div>
     <h3>切り抜き</h3><div class="video-grid">${g.clip.join("")}</div>
     <h3>ショート</h3><div class="video-grid">${g.shorts.join("")}</div>
-    <h3>未分類（確認用）</h3><div class="video-grid">${g.unknown.join("")}</div>
   `;
 }
 
