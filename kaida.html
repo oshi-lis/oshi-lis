@@ -176,6 +176,7 @@ async function getAllVideos(){
     if(token) url+=`&pageToken=${token}`;
     const res=await fetch(url).then(r=>r.json());
     all=all.concat(res.items||[]);
+if(all.length >= 200) break;
     if(!res.nextPageToken) break;
     token=res.nextPageToken;
   }
