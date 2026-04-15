@@ -122,7 +122,7 @@ function saveTab(t){ localStorage.setItem("tab", t); }
 function getTab(){ return localStorage.getItem("tab") || "goods"; }
 
 /* =========================
-   時間
+   時間変換
 ========================= */
 function parseDuration(d){
   if(!d) return Infinity;
@@ -131,41 +131,41 @@ function parseDuration(d){
   return (Number(m[1]||0)*60 + Number(m[2]||0));
 }
 
+/* =========================
+   正規化（ここが重要）
+========================= */
 function normalizeVideo(v){
   return {
     id: v.id,
-    title: v.snippet?.title || "",
+    title: (v.snippet?.title || ""),
     duration: parseDuration(v.contentDetails?.duration),
     liveStatus: v.snippet?.liveBroadcastContent || ""
   };
 }
 
 /* =========================
-   分類（安定版）
+   分類ルール
 ========================= */
 function isShort(v){
-  const sec = parseDuration(v.contentDetails?.duration);
-  return sec > 0 && sec <= 60;
+  return v.duration <= 60;
 }
 
 function isLive(v){
-  const sec = parseDuration(v.contentDetails?.duration);
-  const t = (v.snippet?.title||"").toLowerCase();
-  return sec >= 3600 || t.includes("配信") || t.includes("ライブ") || t.includes("live");
+  return v.liveStatus === "live" || v.liveStatus === "upcoming";
 }
 
 function isSong(v){
-  const t = v.snippet?.title||"";
+  const t = v.title;
   return t.includes("歌ってみた") || t.includes("cover");
 }
 
 function isClip(v){
-  const t = (v.snippet?.title||"").toLowerCase();
+  const t = v.title.toLowerCase();
   return t.includes("切り抜き") || t.includes("clip") || t.includes("まとめ") || t.includes("#切り抜き");
 }
 
 function isOriginal(v){
-  const t = (v.snippet?.title||"").toLowerCase();
+  const t = v.title.toLowerCase();
   return t.includes("オリジナル") || t.includes("mv") || t.includes("試聴");
 }
 
@@ -237,11 +237,13 @@ async function loadArchive(){
   };
 
   videos.forEach(v=>{
-    if(isShort(v)) return g.short.push(v);
-    if(isClip(v)) return g.clip.push(v);
-    if(isSong(v)) return g.song.push(v);
-    if(isOriginal(v)) return g.original.push(v);
-    if(isLive(v)) return g.live.push(v);
+    const nv = normalizeVideo(v);
+
+    if(isLive(nv)) return g.live.push(v);
+    if(isShort(nv)) return g.short.push(v);
+    if(isClip(nv)) return g.clip.push(v);
+    if(isOriginal(nv)) return g.original.push(v);
+    if(isSong(nv)) return g.song.push(v);
   });
 
   const render=a=>a.map(v=>`
