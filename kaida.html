@@ -129,7 +129,7 @@ h3 {
 <script>
 
 const CHANNEL_ID = "UCo2N7C-Z91waaR6lF3LL_jw";
-const API_KEY = "AIzaSyDNqDI1bIEQpWahutCP_w3QpLoQvdcde78";
+const API_KEY = "YOUR_API_KEY_HERE";
 
 let currentTab = "goods";
 
@@ -146,9 +146,6 @@ function setTab(tab) {
 
 render();
 
-/* =========================
-   UI
-========================= */
 function render() {
 
   document.querySelectorAll(".tab").forEach((t, i) => {
@@ -168,7 +165,7 @@ function render() {
 }
 
 /* =========================
-   安定取得
+   アーカイブ（最終安定版）
 ========================= */
 async function loadArchive() {
 
@@ -176,9 +173,6 @@ async function loadArchive() {
 
   try {
 
-    // =========================
-    // uploads取得（安定ソース）
-    // =========================
     const chRes = await fetch(
       `https://www.googleapis.com/youtube/v3/channels?part=contentDetails&id=${CHANNEL_ID}&key=${API_KEY}`
     );
@@ -188,13 +182,8 @@ async function loadArchive() {
     const uploadsId =
       chData.items?.[0]?.contentDetails?.relatedPlaylists?.uploads;
 
-    if (!uploadsId) throw new Error("uploads取得失敗");
-
-    // =========================
-    // playlist取得
-    // =========================
     const plRes = await fetch(
-      `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId=${uploadsId}&maxResults=50&key=${API_KEY}`
+      `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet,contentDetails&playlistId=${uploadsId}&maxResults=50&key=${API_KEY}`
     );
 
     const plData = await plRes.json();
@@ -206,11 +195,6 @@ async function loadArchive() {
       .filter(Boolean)
       .join(",");
 
-    if (!ids) throw new Error("videoId取得失敗");
-
-    // =========================
-    // videos取得
-    // =========================
     const vRes = await fetch(
       `https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails&id=${ids}&key=${API_KEY}`
     );
@@ -219,9 +203,6 @@ async function loadArchive() {
 
     const videos = vData.items || [];
 
-    // =========================
-    // グループ
-    // =========================
     const groups = {
       live: [],
       uta: [],
@@ -237,15 +218,23 @@ async function loadArchive() {
     }
 
     function getId(v) {
-      return v.id || v?.snippet?.resourceId?.videoId;
+      return v.id;
+    }
+
+    function isShort(v) {
+      const d = v.contentDetails?.duration || "";
+      const m = d.match(/PT(?:(\d+)M)?(?:(\d+)S)?/);
+
+      const min = parseInt(m?.[1] || "0");
+      const sec = parseInt(m?.[2] || "0");
+
+      return min === 0 && sec <= 60;
     }
 
     function html(v) {
 
       const id = getId(v);
       const title = v.snippet?.title || "";
-
-      if (!id) return "";
 
       return `
         <div>
@@ -261,9 +250,6 @@ async function loadArchive() {
       `;
     }
 
-    // =========================
-    // 分類（安定優先）
-    // =========================
     videos.forEach(v => {
 
       const title = v.snippet?.title || "";
@@ -271,42 +257,39 @@ async function loadArchive() {
 
       if (!card) return;
 
-      // ① ライブ最優先
-      if (match(title, ["歌枠","配信","雑談","ライブ","live","stream"])) {
-        groups.live.push(card);
+      /* ① ショート最優先 */
+      if (isShort(v)) {
+        groups.shorts.push(card);
         return;
       }
 
-      // ② 歌ってみた
-      if (match(title, ["歌ってみた","cover"])) {
-        groups.uta.push(card);
-        return;
-      }
-
-      // ③ オリ曲
-      if (match(title, ["オリジナル","mv","music video","original"])) {
-        groups.original.push(card);
-        return;
-      }
-
-      // ④ 切り抜き
+      /* ② 切り抜き（守る） */
       if (match(title, ["切り抜き","clip","highlight","まとめ"])) {
         groups.clip.push(card);
         return;
       }
 
-      // ⑤ shorts（完全タイトル依存）
-      if (match(title, ["#shorts","shorts"])) {
-        groups.shorts.push(card);
+      /* ③ 歌ってみた */
+      if (match(title, ["歌ってみた","cover"])) {
+        groups.uta.push(card);
+        return;
+      }
+
+      /* ④ オリ曲 */
+      if (match(title, ["オリジナル","mv","music video","original"])) {
+        groups.original.push(card);
+        return;
+      }
+
+      /* ⑤ ライブ（弱め） */
+      if (match(title, ["配信","歌枠"])) {
+        groups.live.push(card);
         return;
       }
 
       groups.other.push(card);
     });
 
-    // =========================
-    // 表示
-    // =========================
     document.getElementById("content").innerHTML = `
 
       <div>
@@ -349,6 +332,5 @@ async function loadArchive() {
 }
 
 </script>
-
 </body>
 </html>
