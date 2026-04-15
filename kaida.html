@@ -84,22 +84,21 @@ img {
 .title {
   margin-top: 4px;
   font-size: 11px;
-  line-height: 1.3;
 }
 
 .title a {
   text-decoration: none;
   color: #222;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
 }
 
-/* デバッグ表示 */
+/* デバッグ */
 .debug {
   font-size: 10px;
-  color: #888;
+  color: red;
+  white-space: pre-wrap;
+  background: #111;
+  color: #0f0;
+  padding: 10px;
   margin-top: 10px;
 }
 </style>
@@ -138,30 +137,19 @@ const data = {
   news: ["新衣装発表", "ライブ出演"]
 };
 
-let currentTab = "goods";
+let currentTab = localStorage.getItem("tab") || "goods";
 
 /* =========================
-   状態保存
-========================= */
-function saveTab(tab) {
-  localStorage.setItem("lastTab", tab);
-}
-
-function loadTab() {
-  return localStorage.getItem("lastTab") || "goods";
-}
-
-/* =========================
-   タブ制御（ここだけで管理）
+   タブ保存
 ========================= */
 function setTab(tab) {
   currentTab = tab;
-  saveTab(tab);
+  localStorage.setItem("tab", tab);
   render();
 }
 
 /* =========================
-   描画（状態→UI）
+   描画
 ========================= */
 function render() {
 
@@ -175,63 +163,8 @@ function render() {
     return;
   }
 
-  const list = data[currentTab] || [];
-
   document.getElementById("content").innerHTML =
-    "<ul>" + list.map(v => `<li>${v}</li>`).join("") + "</ul>";
+    "<ul>" + (data[currentTab] || []).map(v => `<li>${v}</li>`).join("") + "</ul>";
 }
 
-/* =========================
-   アーカイブ（安定＋テスト付き）
-========================= */
-async function loadArchive() {
-
-  document.getElementById("content").innerHTML = "読み込み中...";
-
-  try {
-
-    const API_KEY = "AIzaSyDNqDI1bIEQpWahutCP_w3QpLoQvdcde78";
-    const CHANNEL_ID = "UCo2N7C-Z91waaR6lF3LL_jw";
-
-    const url =
-      `https://www.googleapis.com/youtube/v3/search?` +
-      `key=${API_KEY}` +
-      `channelId=${CHANNEL_ID}` +
-      `part=snippet&order=date&maxResults=6&type=video`;
-
-    const res = await fetch(url);
-    const data = await res.json();
-
-    const videos = data.items.map(item => {
-
-      const videoId = item.id.videoId;
-      const title = item.snippet.title;
-
-      return `
-        <div>
-          <div class="thumb">
-            <img src="https://i.ytimg.com/vi/${videoId}/hqdefault.jpg">
-          </div>
-          <div class="title">
-            <a href="https://www.youtube.com/watch?v=${videoId}" target="_blank">
-              ${title}
-            </a>
-          </div>
-        </div>
-      `;
-    }).join("");
-
-    document.getElementById("content").innerHTML =
-      `<div class="video-grid">${videos}</div>`;
-
-  } catch (e) {
-
-    document.getElementById("content").innerHTML =
-      "読み込み失敗：" + e.message;
-
-  }
-}
-</script>
-
-</body>
-</html>
+/*
