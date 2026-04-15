@@ -95,6 +95,13 @@ img {
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
+
+/* デバッグ表示 */
+.debug {
+  font-size: 10px;
+  color: #888;
+  margin-top: 10px;
+}
 </style>
 </head>
 
@@ -111,10 +118,10 @@ img {
   </div>
 
   <div class="tabs">
-    <div class="tab" onclick="showTab(event, 'goods')">グッズ</div>
-    <div class="tab" onclick="showTab(event, 'song')">歌枠</div>
-    <div class="tab" onclick="showTab(event, 'archive')">アーカイブ</div>
-    <div class="tab" onclick="showTab(event, 'news')">お知らせ</div>
+    <div class="tab" onclick="setTab('goods')">グッズ</div>
+    <div class="tab" onclick="setTab('song')">歌枠</div>
+    <div class="tab" onclick="setTab('archive')">アーカイブ</div>
+    <div class="tab" onclick="setTab('news')">お知らせ</div>
   </div>
 
   <div class="content" id="content"></div>
@@ -131,90 +138,120 @@ const data = {
   news: ["新衣装発表", "ライブ出演"]
 };
 
-/* -------------------------
-   タブ保存
-------------------------- */
-function saveTab(type) {
-  localStorage.setItem("lastTab", type);
+let currentTab = "goods";
+
+/* =========================
+   状態保存
+========================= */
+function saveTab(tab) {
+  localStorage.setItem("lastTab", tab);
 }
 
-function getSavedTab() {
+function loadTab() {
   return localStorage.getItem("lastTab") || "goods";
 }
 
-/* -------------------------
-   タブ切り替え
-------------------------- */
-function showTab(event, type) {
+/* =========================
+   タブ制御（ここだけで管理）
+========================= */
+function setTab(tab) {
+  currentTab = tab;
+  saveTab(tab);
+  render();
+}
 
-  saveTab(type);
+/* =========================
+   描画（状態→UI）
+========================= */
+function render() {
 
-  document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+  document.querySelectorAll(".tab").forEach((t, i) => {
+    const map = ["goods", "song", "archive", "news"];
+    t.classList.toggle("active", map[i] === currentTab);
+  });
 
-  if (event && event.target) {
-    event.target.classList.add("active");
-  }
-
-  if (type === "archive") {
+  if (currentTab === "archive") {
     loadArchive();
     return;
   }
 
-  const list = data[type] || [];
+  const list = data[currentTab] || [];
 
   document.getElementById("content").innerHTML =
     "<ul>" + list.map(v => `<li>${v}</li>`).join("") + "</ul>";
 }
 
-/* -------------------------
-   YouTube RSS（完全安定版）
-------------------------- */
+/* =========================
+   アーカイブ（安定＋テスト付き）
+========================= */
 async function loadArchive() {
 
   document.getElementById("content").innerHTML = "読み込み中...";
 
-  const res = await fetch(
-    "https://www.youtube.com/feeds/videos.xml?channel_id=" + CHANNEL_ID
-  );
+  try {
 
-  const text = await res.text();
+    const res = await fetch(
+      "https://www.youtube.com/feeds/videos.xml?channel_id=" + CHANNEL_ID
+    );
 
-  const xml = new DOMParser().parseFromString(text, "text/xml");
+    const text = await res.text();
 
-  const entries = [...xml.querySelectorAll("entry")];
+    const xml = new DOMParser().parseFromString(text, "text/xml");
 
-  const videos = entries.slice(0, 6).map(e => {
+    const entries = [...xml.querySelectorAll("entry")];
 
-    const title = e.querySelector("title")?.textContent;
-    const link = e.querySelector("link")?.getAttribute("href");
+    // 🔍 テスト①：件数確認
+    console.log("entry数:", entries.length);
 
-    // ★RSSのIDから直接取る（ここが安定ポイント）
-    const id = e.querySelector("yt\\:videoId")?.textContent;
+    const videos = entries.slice(0, 6).map(e => {
 
-    if (!id) return "";
+      const title = e.querySelector("title")?.textContent;
+      const link = e.querySelector("link")?.getAttribute("href");
 
-    return `
-      <div>
-        <div class="thumb">
-          <img src="https://i.ytimg.com/vi/${id}/hqdefault.jpg">
+      // 🔥 安定版ID取得（ここ重要）
+      const id =
+        e.querySelector("yt\\:videoId")?.textContent ||
+        e.querySelector("videoId")?.textContent;
+
+      // 🔍 テスト②：ID確認
+      console.log("videoId:", id, title);
+
+      if (!id) return "";
+
+      return `
+        <div>
+          <div class="thumb">
+            <img src="https://i.ytimg.com/vi/${id}/hqdefault.jpg">
+          </div>
+          <div class="title">
+            <a href="${link}" target="_blank">${title}</a>
+          </div>
         </div>
-        <div class="title">
-          <a href="${link}" target="_blank">${title}</a>
-        </div>
-      </div>
-    `;
-  }).join("");
+      `;
+    }).join("");
 
-  document.getElementById("content").innerHTML =
-    `<div class="video-grid">${videos}</div>`;
+    // 🔍 テスト③：最終件数
+    console.log("表示件数:", videos.length);
+
+    document.getElementById("content").innerHTML =
+      `<div class="video-grid">${videos}</div>`;
+
+  } catch (e) {
+
+    console.error(e);
+
+    document.getElementById("content").innerHTML =
+      "読み込み失敗（RSSエラー）";
+
+  }
 }
 
-/* -------------------------
-   初期表示（復元）
-------------------------- */
+/* =========================
+   初期化（リロード復元）
+========================= */
 (function init() {
-  const saved = getSavedTab();
-  showTab({ target: document.querySelector(".tab") }, saved);
+  currentTab = loadTab();
+  render();
 })();
 
 </script>
