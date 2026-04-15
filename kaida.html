@@ -167,4 +167,76 @@ function render() {
     "<ul>" + (data[currentTab] || []).map(v => `<li>${v}</li>`).join("") + "</ul>";
 }
 
-/*
+/* =========================
+   アーカイブ（完全デバッグ版）
+========================= */
+async function loadArchive() {
+
+  document.getElementById("content").innerHTML = "読み込み中...";
+
+  try {
+
+    const API_KEY = "AIzaSyDNqDI1bIEQpWahutCP_w3QpLoQvdcde78";
+
+    const url =
+      `https://www.googleapis.com/youtube/v3/search?` +
+      `key=${API_KEY}` +
+      `&channelId=${CHANNEL_ID}` +
+      `&part=snippet&order=date&maxResults=6&type=video`;
+
+    const res = await fetch(url);
+    const data = await res.json();
+
+    // 🔥 画面デバッグ（ここ重要）
+    if (!data.items || !Array.isArray(data.items)) {
+      document.getElementById("content").innerHTML =
+        `<div class="debug">
+        ❌ APIエラー or 制限<br><br>
+        ${JSON.stringify(data, null, 2)}
+        </div>`;
+      return;
+    }
+
+    const videos = data.items.map(item => {
+
+      const videoId = item?.id?.videoId;
+      const title = item?.snippet?.title;
+
+      if (!videoId) return "";
+
+      return `
+        <div>
+          <div class="thumb">
+            <img src="https://i.ytimg.com/vi/${videoId}/hqdefault.jpg">
+          </div>
+          <div class="title">
+            <a href="https://www.youtube.com/watch?v=${videoId}" target="_blank">
+              ${title}
+            </a>
+          </div>
+        </div>
+      `;
+    }).join("");
+
+    document.getElementById("content").innerHTML =
+      `<div class="video-grid">${videos}</div>`;
+
+  } catch (e) {
+
+    document.getElementById("content").innerHTML =
+      `<div class="debug">
+      ❌ 通信エラー<br><br>
+      ${e.message}
+      </div>`;
+  }
+}
+
+/* =========================
+   初期表示（リロード固定）
+========================= */
+render();
+
+</script>
+
+</body>
+</html>
