@@ -253,6 +253,12 @@ async function loadArchive(){
     if(isShort(nv)) return g.short.push(v);
   });
 
+console.log("LIVE", g.live.map(v=>v.snippet.title));
+console.log("CLIP", g.clip.map(v=>v.snippet.title));
+console.log("SONG", g.song.map(v=>v.snippet.title));
+console.log("ORIGINAL", g.original.map(v=>v.snippet.title));
+console.log("SHORT", g.short.map(v=>v.snippet.title));
+
   const render=a=>a.map(v=>`
     <div class="thumb">
       <img src="https://i.ytimg.com/vi/${v.id}/hqdefault.jpg">
