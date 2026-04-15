@@ -62,6 +62,23 @@ body {
   margin-top: 15px;
 }
 
+/* ===== アーカイブUI ===== */
+.header-row{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:10px;
+}
+
+.refresh-btn{
+  font-size:12px;
+  cursor:pointer;
+  background:#eee;
+  border:none;
+  padding:4px 8px;
+  border-radius:6px;
+}
+
 .video-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -79,16 +96,24 @@ body {
   font-size: 12px;
 }
 
-.thumb a:hover {
-  text-decoration: underline;
+.pagination {
+  margin-top: 12px;
+  display:flex;
+  gap:6px;
+  justify-content:center;
+  font-size:12px;
 }
 
-.back {
-  display: inline-block;
-  margin-top: 20px;
-  font-size: 13px;
-  color: #666;
-  text-decoration: none;
+.page-btn{
+  padding:4px 8px;
+  background:#eee;
+  border-radius:6px;
+  cursor:pointer;
+}
+
+.page-btn.active{
+  background:#222;
+  color:#fff;
 }
 </style>
 </head>
@@ -114,16 +139,14 @@ body {
 
   <div class="content" id="content"></div>
 
-  <a href="index.html" class="back">← Back</a>
-
 </div>
 
 <script>
 
 const CHANNEL_ID = "UCo2N7C-Z91waaR6lF3LL_jw";
-const API_KEY = "AIzaSyDNqDI1bIEQpWahutCP_w3QpLoQvdcde78";
+const API_KEY = "YOUR_API_KEY";
 
-const CACHE_KEY = "kaida_archive_cache_v1";
+const CACHE_KEY = "kaida_cache_v2";
 
 const data = {
   goods: ["誕生日グッズ2024","アクリルスタンド"],
@@ -131,22 +154,20 @@ const data = {
   news: ["新衣装発表","ライブ出演"]
 };
 
-const seen = new Set();
+let videos = [];
+let currentPage = 1;
+const perPage = 6;
 
 /* ===== タブ ===== */
-function showTab(e, type){
+function showTab(e,type){
 
-  document.querySelectorAll(".tab").forEach(tab=>{
-    tab.classList.remove("active");
-  });
+  document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
   e.target.classList.add("active");
-
-  localStorage.setItem("activeTab", type);
 
   const el = document.getElementById("content");
 
-  if(type === "archive"){
-    load();
+  if(type==="archive"){
+    loadArchive();
     return;
   }
 
@@ -165,20 +186,8 @@ function parseDuration(d){
   return (Number(h?.[1]||0)*3600)+(Number(m?.[1]||0)*60)+Number(s?.[1]||0);
 }
 
-/* ===== キャッシュ表示 ===== */
-function renderFromCache(){
-  const el = document.getElementById("content");
-  const cache = localStorage.getItem(CACHE_KEY);
-
-  if(cache){
-    el.innerHTML = cache;
-  }else{
-    el.innerHTML = "loading...";
-  }
-}
-
-/* ===== 全取得 ===== */
-async function getAllVideos(limit = 100){
+/* ===== fetch ===== */
+async function getAllVideos(limit=100){
 
   const ch = await fetch(
     `https://www.googleapis.com/youtube/v3/channels?part=contentDetails&id=${CHANNEL_ID}&key=${API_KEY}`
@@ -186,8 +195,8 @@ async function getAllVideos(limit = 100){
 
   const uploads = ch.items[0].contentDetails.relatedPlaylists.uploads;
 
-  let all = [];
-  let token = "";
+  let all=[];
+  let token="";
 
   while(true){
 
@@ -196,21 +205,20 @@ async function getAllVideos(limit = 100){
 
     const res = await fetch(url).then(r=>r.json());
 
-    all = all.concat(res.items || []);
+    all = all.concat(res.items||[]);
 
-    if(all.length >= limit) break;
+    if(all.length>=limit) break;
     if(!res.nextPageToken) break;
 
-    token = res.nextPageToken;
+    token=res.nextPageToken;
   }
 
   return all;
 }
 
-/* ===== 詳細 ===== */
 async function getDetails(ids){
 
-  let all = [];
+  let all=[];
 
   for(let i=0;i<ids.length;i+=50){
     const chunk = ids.slice(i,i+50);
@@ -219,85 +227,84 @@ async function getDetails(ids){
       `https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails&id=${chunk.join(",")}&key=${API_KEY}`
     ).then(r=>r.json());
 
-    all = all.concat(res.items || []);
+    all = all.concat(res.items||[]);
   }
 
   return all;
 }
 
-/* ===== メイン ===== */
-async function load(){
+/* ===== アーカイブロード ===== */
+async function loadArchive(){
 
   const el = document.getElementById("content");
 
-  // ① まずキャッシュ表示（即表示）
-  renderFromCache();
+  el.innerHTML = "loading...";
 
-  try{
+  const cache = localStorage.getItem(CACHE_KEY);
 
-    const list = await getAllVideos(100);
-    const ids = list.map(v=>v.snippet.resourceId.videoId);
-    let videos = await getDetails(ids);
-
-    let g = {live:[], song:[], original:[], clip:[], short:[]};
-
-    const classify = (arr)=>{
-      arr.forEach(v=>{
-
-        const id = v.id;
-        if(seen.has(id)) return;
-        seen.add(id);
-
-        const title = v.snippet.title || "";
-        const sec = parseDuration(v.contentDetails.duration);
-
-        if(title.includes("切り抜き")) return g.clip.push(v);
-        if(title.includes("オリジナル") || title.includes("試聴")) return g.original.push(v);
-        if(title.includes("歌ってみた")) return g.song.push(v);
-        if(title.includes("配信") || title.includes("雑談") || sec >= 1800) return g.live.push(v);
-        if(sec > 0 && sec <= 60) return g.short.push(v);
-      });
-    };
-
-    classify(videos);
-
-    if(g.song.length < 12 || g.original.length < 12){
-
-      const extraList = await getAllVideos(300);
-      const extraIds = extraList.map(v=>v.snippet.resourceId.videoId);
-      const extraVideos = await getDetails(extraIds);
-
-      classify(extraVideos);
-    }
-
-    const render = arr => arr.slice(0,6).map(v=>`
-      <div class="thumb">
-        <a href="https://www.youtube.com/watch?v=${v.id}" target="_blank">
-          <img src="https://i.ytimg.com/vi/${v.id}/hqdefault.jpg">
-          <div>${v.snippet.title}</div>
-        </a>
-      </div>
-    `).join("");
-
-    const html = `
-      <h3>配信アーカイブ</h3><div class="video-grid">${render(g.live)}</div>
-      <h3>歌ってみた</h3><div class="video-grid">${render(g.song)}</div>
-      <h3>オリ曲</h3><div class="video-grid">${render(g.original)}</div>
-      <h3>切り抜き</h3><div class="video-grid">${render(g.clip)}</div>
-      <h3>ショート</h3><div class="video-grid">${render(g.short)}</div>
-    `;
-
-    el.innerHTML = html;
-
-    // ② キャッシュ更新（裏更新）
-    localStorage.setItem(CACHE_KEY, html);
-
-  }catch(e){
-    el.innerHTML = "エラー（APIキー or 通信）";
+  if(cache){
+    videos = JSON.parse(cache);
   }
+
+  const list = await getAllVideos(100);
+  const ids = list.map(v=>v.snippet.resourceId.videoId);
+  videos = await getDetails(ids);
+
+  localStorage.setItem(CACHE_KEY, JSON.stringify(videos));
+
+  currentPage = 1;
+  renderArchive();
 }
 
-/* ===== タブ復元 ===== */
+/* ===== ページ描画 ===== */
+function renderArchive(){
+
+  const el = document.getElementById("content");
+
+  const start = (currentPage-1)*perPage;
+  const pageItems = videos.slice(start,start+perPage);
+
+  const render = arr => arr.map(v=>`
+    <div class="thumb">
+      <a href="https://www.youtube.com/watch?v=${v.id}" target="_blank">
+        <img src="https://i.ytimg.com/vi/${v.id}/hqdefault.jpg">
+        <div>${v.snippet.title}</div>
+      </a>
+    </div>
+  `).join("");
+
+  const totalPages = Math.ceil(videos.length/perPage);
+
+  el.innerHTML = `
+    <div class="header-row">
+      <h3>配信アーカイブ</h3>
+      <button class="refresh-btn" onclick="refreshArchive()">🔄更新</button>
+    </div>
+
+    <div class="video-grid">${render(pageItems)}</div>
+
+    <div class="pagination">
+      ${Array.from({length: totalPages},(_,i)=>`
+        <div class="page-btn ${i+1===currentPage?'active':''}"
+             onclick="changePage(${i+1})">${i+1}</div>
+      `).join("")}
+    </div>
+  `;
+}
+
+/* ===== ページ操作 ===== */
+function changePage(p){
+  currentPage = p;
+  renderArchive();
+}
+
+/* ===== 更新 ===== */
+function refreshArchive(){
+  localStorage.removeItem(CACHE_KEY);
+  loadArchive();
+}
+
+/* ===== 初期 ===== */
 const saved = localStorage.getItem("activeTab") || "goods";
 const target = document.querySelector(`.tab[onclick*="${saved}"]`);
 showTab({target}, saved);
