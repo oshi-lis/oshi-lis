@@ -60,7 +60,7 @@ img {
   color: white;
 }
 
-/* 中身 */
+/* コンテンツ */
 .content {
   margin-top: 15px;
 }
@@ -70,12 +70,6 @@ img {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 8px;
-}
-
-@media (max-width: 600px) {
-  .video-grid {
-    grid-template-columns: repeat(3, 1fr);
-  }
 }
 
 /* サムネ */
@@ -147,24 +141,36 @@ img {
 </div>
 
 <script>
-function debug(msg) {
-  document.getElementById("content").innerHTML =
-    `<pre style="font-size:12px; background:#000; color:#0f0; padding:10px;">${msg}</pre>`;
-}
+
 const CHANNEL_ID = "UCo2N7C-Z91waaR6lF3LL_jw";
 
+/* -------------------------
+   状態保存
+------------------------- */
+function saveTab(type) {
+  localStorage.setItem("lastTab", type);
+}
+
+function getSavedTab() {
+  return localStorage.getItem("lastTab") || "goods";
+}
+
+/* -------------------------
+   データ
+------------------------- */
 const data = {
   goods: ["誕生日グッズ2024", "アクリルスタンド"],
   song: ["歌枠まとめ", "アニソン歌枠"],
   news: ["新衣装発表", "ライブ出演"]
 };
 
-/* =========================
+/* -------------------------
    タブ切り替え
-========================= */
+------------------------- */
 function showTab(event, type) {
 
-  // タブの見た目リセット
+  saveTab(type);
+
   document.querySelectorAll(".tab").forEach(tab => {
     tab.classList.remove("active");
   });
@@ -173,62 +179,71 @@ function showTab(event, type) {
     event.target.classList.add("active");
   }
 
-  // アーカイブだけ特別処理
   if (type === "archive") {
     loadArchive();
     return;
   }
 
-  // 通常表示
+  const list = data[type] || [];
+
   document.getElementById("content").innerHTML =
-    "<ul>" +
-    data[type].map(item => `<li>${item}</li>`).join("") +
-    "</ul>";
+    "<ul>" + list.map(item => `<li>${item}</li>`).join("") + "</ul>";
 }
 
-/* =========================
-   アーカイブ取得
-========================= */
+/* -------------------------
+   YouTube直RSS（安定版）
+------------------------- */
 async function loadArchive() {
 
-debug("① loadArchive開始");
-
   const res = await fetch(
-    "https://api.rss2json.com/v1/api.json?rss_url=" +
-    encodeURIComponent(
-      "https://www.youtube.com/feeds/videos.xml?channel_id=" + CHANNEL_ID
-    )
+    "https://www.youtube.com/feeds/videos.xml?channel_id=" + CHANNEL_ID
   );
 
-debug("② fetch通過");
+  const text = await res.text();
 
-  const json = await res.json();
+  const parser = new DOMParser();
+  const xml = parser.parseFromString(text, "text/xml");
 
-  const filtered = (json.items || [])
-    .filter(v => v && v.link && !v.link.includes("shorts"));
+  const entries = [...xml.querySelectorAll("entry")];
 
-  const videos = filtered.slice(0, 6);
+  const videos = entries.slice(0, 6).map(entry => {
 
-  const list = videos.map(v =>
-    `<div class="video-card">
-      <div class="thumb">
-        <img src="${v.thumbnail}">
+    const title = entry.querySelector("title")?.textContent;
+    const link = entry.querySelector("link")?.getAttribute("href");
+
+    const id = link.split("v=")[1];
+
+    return `
+      <div>
+        <div class="thumb">
+          <img src="https://i.ytimg.com/vi/${id}/hqdefault.jpg">
+        </div>
+        <div class="title">
+          <a href="${link}" target="_blank">${title}</a>
+        </div>
       </div>
-      <div class="title">
-        <a href="${v.link}" target="_blank">${v.title}</a>
-      </div>
-    </div>`
-  ).join("");
+    `;
+  }).join("");
 
   document.getElementById("content").innerHTML =
-    `<div class="video-grid">${list}</div>`;
+    `<div class="video-grid">${videos}</div>`;
 }
 
-/* =========================
-   初期表示
-========================= */
-showTab(null, "goods");
- 
+/* -------------------------
+   初期表示（復元）
+------------------------- */
+function init() {
+  const saved = getSavedTab();
+
+  const fakeEvent = { target: document.querySelector(".tab") };
+
+  showTab(fakeEvent, saved);
+}
+
+/* -------------------------
+   起動
+------------------------- */
+init();
 
 </script>
 
