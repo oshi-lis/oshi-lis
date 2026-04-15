@@ -196,25 +196,24 @@ async function loadArchive() {
 
     const text = await res.text();
 
+    // 🔍 ここでまず中身チェック
+    if (!text.includes("<entry")) {
+      throw new Error("RSSじゃないデータが返ってきてる");
+    }
+
     const xml = new DOMParser().parseFromString(text, "text/xml");
 
     const entries = [...xml.querySelectorAll("entry")];
 
-    // 🔍 テスト①：件数確認
-    console.log("entry数:", entries.length);
+    if (entries.length === 0) {
+      throw new Error("entryが0件（解析失敗）");
+    }
 
     const videos = entries.slice(0, 6).map(e => {
 
       const title = e.querySelector("title")?.textContent;
       const link = e.querySelector("link")?.getAttribute("href");
-
-      // 🔥 安定版ID取得（ここ重要）
-      const id =
-        e.querySelector("yt\\:videoId")?.textContent ||
-        e.querySelector("videoId")?.textContent;
-
-      // 🔍 テスト②：ID確認
-      console.log("videoId:", id, title);
+      const id = e.querySelector("yt\\:videoId")?.textContent;
 
       if (!id) return "";
 
@@ -230,9 +229,6 @@ async function loadArchive() {
       `;
     }).join("");
 
-    // 🔍 テスト③：最終件数
-    console.log("表示件数:", videos.length);
-
     document.getElementById("content").innerHTML =
       `<div class="video-grid">${videos}</div>`;
 
@@ -241,18 +237,14 @@ async function loadArchive() {
     console.error(e);
 
     document.getElementById("content").innerHTML =
-      "読み込み失敗（RSSエラー）";
-
+      `
+      <div style="font-size:12px;color:red;">
+        RSS読み込み失敗<br>
+        原因: ${e.message}
+      </div>
+      `;
   }
 }
-
-/* =========================
-   初期化（リロード復元）
-========================= */
-(function init() {
-  currentTab = loadTab();
-  render();
-})();
 
 </script>
 
