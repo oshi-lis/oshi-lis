@@ -129,7 +129,7 @@ h3 {
 <script>
 
 const CHANNEL_ID = "UCo2N7C-Z91waaR6lF3LL_jw";
-const API_KEY = "AIzaSyAhz5t0MJUGT_vx6p2m4rjOlqfu71PSpiE";
+const API_KEY = "YOUR_API_KEY";
 
 let currentTab = "goods";
 
@@ -165,7 +165,7 @@ function render() {
 }
 
 /* =========================
-   アーカイブ（最終安定版）
+   最終安定アーカイブ
 ========================= */
 async function loadArchive() {
 
@@ -212,28 +212,23 @@ async function loadArchive() {
       other: []
     };
 
-    function match(title, list) {
-      const t = (title || "").toLowerCase();
-      return list.some(w => t.includes(w));
-    }
+    /* =========================
+       判定関数（最終安定版）
+    ========================= */
 
-    function getId(v) {
-      return v.id;
-    }
+    const match = (t, list) =>
+      list.some(w => (t || "").toLowerCase().includes(w));
 
-    function isShort(v) {
+    const isShort = (v) => {
       const d = v.contentDetails?.duration || "";
       const m = d.match(/PT(?:(\d+)M)?(?:(\d+)S)?/);
-
       const min = parseInt(m?.[1] || "0");
       const sec = parseInt(m?.[2] || "0");
-
       return min === 0 && sec <= 60;
-    }
+    };
 
-    function html(v) {
-
-      const id = getId(v);
+    const html = (v) => {
+      const id = v.id;
       const title = v.snippet?.title || "";
 
       return `
@@ -248,7 +243,11 @@ async function loadArchive() {
           </div>
         </div>
       `;
-    }
+    };
+
+    /* =========================
+       分類（優先順位固定）
+    ========================= */
 
     videos.forEach(v => {
 
@@ -257,38 +256,42 @@ async function loadArchive() {
 
       if (!card) return;
 
-      /* ① ショート最優先 */
+      // ① Shorts（最優先）
       if (isShort(v)) {
         groups.shorts.push(card);
         return;
       }
 
-      /* ② 切り抜き（守る） */
-      if (match(title, ["切り抜き","clip","highlight","まとめ"])) {
+      // ② 切り抜き（守る）
+      if (match(title, ["切り抜き","clip","clips","highlight","まとめ"])) {
         groups.clip.push(card);
         return;
       }
 
-      /* ③ 歌ってみた */
-      if (match(title, ["歌ってみた","cover"])) {
+      // ③ 歌みた
+      if (match(title, ["歌ってみた","cover","covered"])) {
         groups.uta.push(card);
         return;
       }
 
-      /* ④ オリ曲 */
-      if (match(title, ["オリジナル","mv","music video","original"])) {
+      // ④ オリ曲
+      if (match(title, ["オリジナル","original","mv","music video","official"])) {
         groups.original.push(card);
         return;
       }
 
-      /* ⑤ ライブ（弱め） */
-      if (match(title, ["配信","歌枠"])) {
+      // ⑤ ライブ（最後に弱く拾う）
+      if (match(title, ["配信","歌枠","ライブ","live","stream","雑談"])) {
         groups.live.push(card);
         return;
       }
 
       groups.other.push(card);
     });
+
+    /* =========================
+       表示
+    ========================= */
 
     document.getElementById("content").innerHTML = `
 
