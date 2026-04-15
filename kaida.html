@@ -132,41 +132,47 @@ function parseDuration(d){
 }
 
 /* =========================
-   正規化（ここが重要）
+   正規化（統一データ）
 ========================= */
 function normalizeVideo(v){
   return {
     id: v.id,
-    title: (v.snippet?.title || ""),
+    title: (v.snippet?.title || "")
+      .normalize("NFKC")
+      .toLowerCase()
+      .replace(/\s/g, ""),
     duration: parseDuration(v.contentDetails?.duration),
-    liveStatus: v.snippet?.liveBroadcastContent || ""
+    liveStatus: v.snippet?.liveBroadcastContent || "none"
   };
 }
 
 /* =========================
-   分類ルール
+   分類ルール（完全統一）
 ========================= */
-function isShort(v){
-  return v.duration <= 60;
-}
 
+// ライブ（APIのみ）
 function isLive(v){
   return v.liveStatus === "live" || v.liveStatus === "upcoming";
 }
 
-function isSong(v){
-  const t = v.title;
-  return t.includes("歌ってみた") || t.includes("cover");
+// ショート（ライブ除外＋60秒以下）
+function isShort(v){
+  return v.liveStatus === "none" && v.duration <= 60;
 }
 
+// 切り抜き
 function isClip(v){
-  const t = v.title.toLowerCase();
-  return t.includes("切り抜き") || t.includes("clip") || t.includes("まとめ") || t.includes("#切り抜き");
+  return v.title.includes("切り抜き") || v.title.includes("clip");
 }
 
+// 歌ってみた
+function isSong(v){
+  return v.title.includes("歌ってみた") || v.title.includes("cover");
+}
+
+// オリ曲・試聴
 function isOriginal(v){
-  const t = v.title.toLowerCase();
-  return t.includes("オリジナル") || t.includes("mv") || t.includes("試聴");
+  return v.title.includes("オリジナル") || v.title.includes("mv") || v.title.includes("試聴");
 }
 
 /* =========================
