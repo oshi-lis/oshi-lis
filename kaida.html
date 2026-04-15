@@ -129,13 +129,7 @@ h3 {
 <script>
 
 const CHANNEL_ID = "UCo2N7C-Z91waaR6lF3LL_jw";
-const API_KEY = "AIzaSyAhz5t0MJUGT_vx6p2m4rjOlqfu71PSpiE";
-
-const data = {
-  goods: ["誕生日グッズ2024", "アクリルスタンド"],
-  song: ["歌枠まとめ", "アニソン歌枠"],
-  news: ["新衣装発表", "ライブ出演"]
-};
+const API_KEY = "YOUR_API_KEY";
 
 /* =========================
    タブ固定
@@ -161,6 +155,12 @@ document.addEventListener("DOMContentLoaded", render);
 /* =========================
    UI
 ========================= */
+const data = {
+  goods: ["誕生日グッズ2024", "アクリルスタンド"],
+  song: ["歌枠まとめ", "アニソン歌枠"],
+  news: ["新衣装発表", "ライブ出演"]
+};
+
 function render() {
 
   const map = ["goods", "song", "archive", "news"];
@@ -181,23 +181,24 @@ function render() {
 }
 
 /* =========================
-   Shorts判定（修正版）
+   Shorts判定（完全安定版）
 ========================= */
 function isShort(v) {
 
-  const d = v.contentDetails?.duration || "";
-  const m = d.match(/PT(?:(\d+)M)?(?:(\d+)S)?/);
+  const d = v.contentDetails?.duration;
 
-  const min = parseInt(m?.[1] || "0");
-  const sec = parseInt(m?.[2] || "0");
+  // ★欠損ガード
+  if (!d) return false;
+
+  const m = d.match(/PT(?:(\d+)M)?(?:(\d+)S)?/);
+  if (!m) return false;
+
+  const min = parseInt(m[1] || "0");
+  const sec = parseInt(m[2] || "0");
+
   const total = (min * 60) + sec;
 
-  const title = (v.snippet?.title || "").toLowerCase();
-
-  return total <= 60 && (
-    title.includes("#shorts") ||
-    title.includes("short")
-  );
+  return total <= 60;
 }
 
 /* =========================
@@ -214,7 +215,10 @@ async function loadArchive() {
       `https://www.googleapis.com/youtube/v3/channels?part=contentDetails&id=${CHANNEL_ID}&key=${API_KEY}`
     ).then(r => r.json());
 
-    const uploadsId = ch?.items?.[0]?.contentDetails?.relatedPlaylists?.uploads;
+    const uploadsId =
+      ch?.items?.[0]?.contentDetails?.relatedPlaylists?.uploads;
+
+    if (!uploadsId) throw new Error("uploads取得失敗");
 
     const pl = await fetch(
       `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet,contentDetails&playlistId=${uploadsId}&maxResults=50&key=${API_KEY}`
