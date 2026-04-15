@@ -1,8 +1,8 @@
 <!DOCTYPE html>
-<html lang="ja">
+<html>
 <head>
 <meta charset="UTF-8">
-<title>甲斐田　晴</title>
+<title>甲斐田 晴</title>
 
 <style>
 body {
@@ -27,7 +27,7 @@ body {
   align-items: center;
 }
 
-.top img {
+img {
   width: 100px;
   height: 100px;
   border-radius: 16px;
@@ -62,37 +62,21 @@ body {
   margin-top: 15px;
 }
 
-.content ul {
-  padding: 0;
-  list-style: none;
+.video-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
 }
 
-.video-item {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-  margin-bottom: 12px;
+.thumb {
+  font-size: 12px;
 }
 
-.video-item img {
-  width: 120px;
-  height: 68px;
+.thumb img {
+  width: 100%;
+  aspect-ratio: 16/9;
   border-radius: 8px;
   object-fit: cover;
-}
-
-.video-title {
-  font-size: 13px;
-  line-height: 1.4;
-  flex: 1;
-}
-
-.category-title {
-  display: block;
-  font-weight: bold;
-  margin: 20px 0 10px;
-  font-size: 14px;
-  color: #444;
 }
 
 .back {
@@ -108,16 +92,17 @@ body {
 <body>
 
 <div class="card">
+
   <div class="top">
     <img src="images/kaida.png">
     <div>
-      <div class="name">甲斐田　晴</div>
+      <div class="name">甲斐田 晴</div>
       <div style="font-size:12px;color:#666;">歌・雑談・ゲーム配信</div>
     </div>
   </div>
 
   <div class="tabs">
-    <div class="tab active" onclick="showTab(event, 'goods')">グッズ</div>
+    <div class="tab" onclick="showTab(event, 'goods')">グッズ</div>
     <div class="tab" onclick="showTab(event, 'song')">歌枠</div>
     <div class="tab" onclick="showTab(event, 'archive')">アーカイブ</div>
     <div class="tab" onclick="showTab(event, 'news')">お知らせ</div>
@@ -126,93 +111,153 @@ body {
   <div class="content" id="content"></div>
 
   <a href="index.html" class="back">← Back</a>
+
 </div>
 
 <script>
-const CHANNEL_ID = "UCo2N7C-Z91waaR6lF3LL_jw";
-const API_KEY = "AIzaSyDNqDI1bIEQpWahutCP_w3QpLoQvdcde78";
 
+const CHANNEL_ID = "UCo2N7C-Z91waaR6lF3LL_jw";
+const API_KEY = "YOUR_API_KEY_HERE";
+
+/* ===== UI ===== */
 const data = {
-  goods: ["誕生日グッズ2024", "アクリルスタンド"],
-  song: ["アニソン縛り歌枠", "深夜歌枠"],
-  news: ["新衣装発表", "ライブ出演"]
+  goods: [
+    "誕生日グッズ2024",
+    "アクリルスタンド"
+  ],
+  song: [
+    "アニソン縛り歌枠",
+    "深夜歌枠"
+  ],
+  news: [
+    "新衣装発表",
+    "ライブ出演"
+  ]
 };
 
-async function showTab(e, type) {
-  document.querySelectorAll(".tab").forEach(tab => tab.classList.remove("active"));
-  if (e && e.target) {
-    e.target.classList.add("active");
-  } else {
-    const tabs = document.querySelectorAll(".tab");
-    const map = { goods: 0, song: 1, archive: 2, news: 3 };
-    tabs[map[type]]?.classList.add("active");
-  }
+/* ===== タブ ===== */
+window.addEventListener("load", () => {
+  const saved = localStorage.getItem("activeTab") || "goods";
+  showTab(null, saved);
+});
+
+function showTab(e, type) {
+
+  document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+  const map = { goods: 0, song: 1, archive: 2, news: 3 };
+  document.querySelectorAll(".tab")[map[type]]?.classList.add("active");
+
+  localStorage.setItem("activeTab", type);
 
   const content = document.getElementById("content");
 
   if (type !== "archive") {
-    content.innerHTML = "<ul>" + data[type].map(item => `<li>${item}</li>`).join("") + "</ul>";
+    content.innerHTML =
+      "<ul>" +
+      data[type].map(v => `<li>${v}</li>`).join("") +
+      "</ul>";
   } else {
     loadArchive();
   }
 }
 
+/* ===== YouTube ===== */
 function parseDuration(d) {
-  const m = d.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
-  return (Number(m[1] || 0) * 3600) + (Number(m[2] || 0) * 60) + Number(m[3] || 0);
+  if (!d) return 0;
+  const m = d.match(/PT(?:(\d+)M)?(?:(\d+)S)?/);
+  return m ? (Number(m[1]||0)*60 + Number(m[2]||0)) : 0;
 }
 
+function isShort(v) {
+  return parseDuration(v.contentDetails?.duration) <= 60;
+}
+
+function isLive(v) {
+  const sec = parseDuration(v.contentDetails?.duration);
+  const t = (v.snippet?.title || "").toLowerCase();
+  return sec >= 3600 || t.includes("配信") || t.includes("ライブ") || t.includes("live");
+}
+
+function isSong(v) {
+  return (v.snippet?.title || "").includes("歌ってみた");
+}
+
+function isClip(v) {
+  return (v.snippet?.title || "").includes("切り抜き");
+}
+
+function isOriginal(v) {
+  const t = (v.snippet?.title || "").toLowerCase();
+  return t.includes("オリジナル") || t.includes("mv") || t.includes("試聴");
+}
+
+/* ===== アーカイブ ===== */
 async function loadArchive() {
+
   const el = document.getElementById("content");
-  el.innerHTML = "読み込み中...";
 
-  try {
-    const ch = await fetch(`https://www.googleapis.com/youtube/v3/channels?part=contentDetails&id=${CHANNEL_ID}&key=${API_KEY}`).then(r => r.json());
-    const uploads = ch.items[0].contentDetails.relatedPlaylists.uploads;
+  el.innerHTML = "loading...";
 
-    const pl = await fetch(`https://www.googleapis.com/youtube/v3/playlistItems?part=contentDetails&playlistId=${uploads}&maxResults=15&key=${API_KEY}`).then(r => r.json());
-    const ids = pl.items.map(v => v.contentDetails.videoId).join(",");
+  const ch = await fetch(
+    `https://www.googleapis.com/youtube/v3/channels?part=contentDetails&id=${CHANNEL_ID}&key=${API_KEY}`
+  ).then(r => r.json());
 
-    const vd = await fetch(`https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails,liveStreamingDetails&id=${ids}&key=${API_KEY}`).then(r => r.json());
+  const uploads = ch.items[0].contentDetails.relatedPlaylists.uploads;
 
-    const groups = { live: [], song: [], short: [] };
+  const pl = await fetch(
+    `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet,contentDetails&playlistId=${uploads}&maxResults=50&key=${API_KEY}`
+  ).then(r => r.json());
 
-    vd.items.forEach(v => {
-      const item = {
-        title: v.snippet.title,
-        thumb: v.snippet.thumbnails.medium.url
-      };
-      const sec = parseDuration(v.contentDetails.duration);
-      
-      if (sec <= 60) {
-        groups.short.push(item);
-      } else if (item.title.includes("歌ってみた") || item.title.includes("Cover") || item.title.includes("MV")) {
-        groups.song.push(item);
-      } else {
-        // 歌とショート以外はすべてライブに集約
-        groups.live.push(item);
-      }
-    });
+  const ids = pl.items.map(v => v.snippet.resourceId.videoId).join(",");
 
-    const render = (label, arr) => arr.length ? `
-      <span class="category-title">${label}</span>
-      <ul>
-        ${arr.map(v => `
-          <li class="video-item">
-            <img src="${v.thumb}">
-            <div class="video-title">${v.title}</div>
-          </li>
-        `).join("")}
-      </ul>` : "";
+  const vd = await fetch(
+    `https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails&id=${ids}&key=${API_KEY}`
+  ).then(r => r.json());
 
-    el.innerHTML = render("ライブ", groups.live) + render("歌", groups.song) + render("ショート", groups.short);
+  const videos = vd.items;
 
-  } catch (e) {
-    el.innerHTML = "読み込み失敗";
-  }
+  const groups = {
+    live: [],
+    song: [],
+    original: [],
+    clip: [],
+    short: []
+  };
+
+  videos.forEach(v => {
+    if (isShort(v)) return groups.short.push(v);
+    if (isLive(v)) return groups.live.push(v);
+    if (isSong(v)) return groups.song.push(v);
+    if (isClip(v)) return groups.clip.push(v);
+    if (isOriginal(v)) return groups.original.push(v);
+  });
+
+  const render = (arr) =>
+    arr.map(v => `
+      <div class="thumb">
+        <img src="https://i.ytimg.com/vi/${v.id}/hqdefault.jpg">
+        <div>${v.snippet.title}</div>
+      </div>
+    `).join("");
+
+  el.innerHTML = `
+    <h3>ライブ</h3>
+    <div class="video-grid">${render(groups.live)}</div>
+
+    <h3>歌ってみた</h3>
+    <div class="video-grid">${render(groups.song)}</div>
+
+    <h3>オリ曲 / 試聴</h3>
+    <div class="video-grid">${render(groups.original)}</div>
+
+    <h3>切り抜き</h3>
+    <div class="video-grid">${render(groups.clip)}</div>
+
+    <h3>ショート</h3>
+    <div class="video-grid">${render(groups.short)}</div>
+  `;
 }
 
-showTab(null, "goods");
 </script>
 
 </body>
