@@ -123,6 +123,8 @@ body {
 const CHANNEL_ID = "UCo2N7C-Z91waaR6lF3LL_jw";
 const API_KEY = "AIzaSyDNqDI1bIEQpWahutCP_w3QpLoQvdcde78";
 
+const CACHE_KEY = "kaida_archive_cache_v1";
+
 const data = {
   goods: ["誕生日グッズ2024","アクリルスタンド"],
   song: ["アニソン縛り歌枠","深夜歌枠"],
@@ -161,6 +163,18 @@ function parseDuration(d){
   const m=d.match(/(\d+)M/);
   const s=d.match(/(\d+)S/);
   return (Number(h?.[1]||0)*3600)+(Number(m?.[1]||0)*60)+Number(s?.[1]||0);
+}
+
+/* ===== キャッシュ表示 ===== */
+function renderFromCache(){
+  const el = document.getElementById("content");
+  const cache = localStorage.getItem(CACHE_KEY);
+
+  if(cache){
+    el.innerHTML = cache;
+  }else{
+    el.innerHTML = "loading...";
+  }
 }
 
 /* ===== 全取得 ===== */
@@ -215,7 +229,9 @@ async function getDetails(ids){
 async function load(){
 
   const el = document.getElementById("content");
-  el.innerHTML = "loading...";
+
+  // ① まずキャッシュ表示（即表示）
+  renderFromCache();
 
   try{
 
@@ -263,13 +279,18 @@ async function load(){
       </div>
     `).join("");
 
-    el.innerHTML = `
+    const html = `
       <h3>配信アーカイブ</h3><div class="video-grid">${render(g.live)}</div>
       <h3>歌ってみた</h3><div class="video-grid">${render(g.song)}</div>
       <h3>オリ曲</h3><div class="video-grid">${render(g.original)}</div>
       <h3>切り抜き</h3><div class="video-grid">${render(g.clip)}</div>
       <h3>ショート</h3><div class="video-grid">${render(g.short)}</div>
     `;
+
+    el.innerHTML = html;
+
+    // ② キャッシュ更新（裏更新）
+    localStorage.setItem(CACHE_KEY, html);
 
   }catch(e){
     el.innerHTML = "エラー（APIキー or 通信）";
