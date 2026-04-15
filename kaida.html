@@ -143,18 +143,43 @@ function showTab(e,type){
 }
 
 /* =========================
-   ★追加：videos分割取得
+   全動画取得（50件制限突破）
 ========================= */
-async function fetchVideosInChunks(ids){
+async function getAllPlaylistItems(playlistId){
+
+  let all = [];
+  let pageToken = "";
+
+  while(true){
+
+    let url = `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet,contentDetails&playlistId=${playlistId}&maxResults=50&key=${API_KEY}`;
+    if(pageToken) url += `&pageToken=${pageToken}`;
+
+    const res = await fetch(url);
+    const data = await res.json();
+
+    all = all.concat(data.items || []);
+
+    if(!data.nextPageToken) break;
+    pageToken = data.nextPageToken;
+  }
+
+  return all;
+}
+
+/* =========================
+   videos制限突破
+========================= */
+async function getVideos(ids){
 
   let all = [];
 
-  for(let i = 0; i < ids.length; i += 50){
+  for(let i=0;i<ids.length;i+=50){
 
-    const part = ids.slice(i, i + 50).join(",");
+    const chunk = ids.slice(i,i+50);
 
     const res = await fetch(
-      `https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails&id=${part}&key=${API_KEY}`
+      `https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails&id=${chunk.join(",")}&key=${API_KEY}`
     );
 
     const data = await res.json();
@@ -165,17 +190,22 @@ async function fetchVideosInChunks(ids){
 }
 
 /* =========================
-   duration
+   正しい時間変換
 ========================= */
 function parseDuration(d){
   if(!d) return 0;
-  const m = d.match(/PT(?:(\d+)M)?(?:(\d+)S)?/);
-  if(!m) return 0;
-  return (Number(m[1]||0)*60 + Number(m[2]||0));
+
+  const h = d.match(/(\d+)H/);
+  const m = d.match(/(\d+)M/);
+  const s = d.match(/(\d+)S/);
+
+  return (Number(h?.[1]||0)*3600)
+       + (Number(m?.[1]||0)*60)
+       + Number(s?.[1]||0);
 }
 
 /* =========================
-   アーカイブ
+   メイン
 ========================= */
 async function loadArchive(){
 
@@ -188,15 +218,11 @@ async function loadArchive(){
 
   const uploads=ch.items[0].contentDetails.relatedPlaylists.uploads;
 
-  const pl=await fetch(
-    `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet,contentDetails&playlistId=${uploads}&maxResults=50&key=${API_KEY}`
-  ).then(r=>r.json());
+  const pl = await getAllPlaylistItems(uploads);
 
-  // ★ここだけ変更（配列で持つ）
-  const ids = pl.items.map(v=>v.snippet.resourceId.videoId);
+  const ids = pl.map(v=>v.snippet.resourceId.videoId);
 
-  // ★ここだけ変更（分割取得）
-  const videos = await fetchVideosInChunks(ids);
+  const videos = await getVideos(ids);
 
   const g={
     live:[],
@@ -207,6 +233,7 @@ async function loadArchive(){
   };
 
   videos.forEach(v=>{
+
     const title = v.snippet.title || "";
     const sec = parseDuration(v.contentDetails.duration);
 
@@ -214,7 +241,8 @@ async function loadArchive(){
     if(title.includes("オリジナル") || title.includes("mv") || title.includes("試聴")) return g.original.push(v);
     if(title.includes("歌ってみた") || title.includes("cover")) return g.song.push(v);
     if(title.includes("配信") || title.includes("雑談") || sec >= 1800) return g.live.push(v);
-    if(sec <= 60) return g.short.push(v);
+    if(sec > 0 && sec <= 60) return g.short.push(v);
+
   });
 
   const render=a=>a.map(v=>`
