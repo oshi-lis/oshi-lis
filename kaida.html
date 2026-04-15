@@ -140,76 +140,39 @@ function loadTab(tab) {
 }
 
 /* ===== アーカイブ ===== */
-async function loadArchive() {
+function parseDuration(d) {
+  if (!d) return 0;
+  const m = d.match(/PT(?:(\d+)M)?(?:(\d+)S)?/);
+  if (!m) return 0;
+  return (Number(m[1] || 0) * 60) + Number(m[2] || 0);
+}
 
-  const el = document.getElementById("content");
-  el.innerHTML = "loading...";
+/* ===== ライブ（時間主軸） ===== */
+function isLive(v) {
+  const sec = parseDuration(v.contentDetails?.duration);
+  const title = (v.snippet?.title || "").toLowerCase();
 
-  const ch = await fetch(
-    `https://www.googleapis.com/youtube/v3/channels?part=contentDetails&id=${CHANNEL_ID}&key=${API_KEY}`
-  ).then(r => r.json());
+  return sec >= 3600 || title.includes("配信") || title.includes("ライブ");
+}
 
-  const uploads = ch?.items?.[0]?.contentDetails?.relatedPlaylists?.uploads;
+/* ===== ショート（時間主軸＋ライブ除外） ===== */
+function isShort(v) {
+  const sec = parseDuration(v.contentDetails?.duration);
+  const title = (v.snippet?.title || "").toLowerCase();
 
-  const pl = await fetch(
-    `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet,contentDetails&playlistId=${uploads}&maxResults=50&key=${API_KEY}`
-  ).then(r => r.json());
+  const isLiveLike = sec >= 1800; // ←ここが重要（短いライブ混入防止）
 
-  const ids = (pl.items || [])
-    .map(v => v?.snippet?.resourceId?.videoId)
-    .filter(Boolean)
-    .join(",");
+  return sec <= 60 && !isLiveLike;
+}
 
-  const vd = await fetch(
-    `https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails&id=${ids}&key=${API_KEY}`
-  ).then(r => r.json());
+/* ===== オリ曲 / 切り抜き（タイトル主軸） ===== */
+function isOriginal(v) {
+  const title = (v.snippet?.title || "").toLowerCase();
+  return title.includes("オリジナル") || title.includes("mv") || title.includes("試聴");
+}
 
-  const videos = vd.items || [];
-
-  const g = {
-    live: [],
-    uta: [],
-    original: [],
-    clip: [],
-    shorts: []
-  };
-
-  const html = (v) => {
-    const id = v.id;
-    return `
-      <div>
-        <img src="https://i.ytimg.com/vi/${id}/hqdefault.jpg">
-      </div>
-    `;
-  };
-
-  videos.forEach(v => {
-
-    const title = (v.snippet?.title || "").toLowerCase();
-    const card = html(v);
-
-    if (isShort(v)) return g.shorts.push(card);
-    if (isLive(v)) return g.live.push(card);
-
-    if (title.includes("切り抜き")) return g.clip.push(card);
-    if (title.includes("歌ってみた")) return g.uta.push(card);
-
-    if (
-      title.includes("オリジナル") ||
-      title.includes("mv") ||
-      title.includes("試聴")
-    ) return g.original.push(card);
-
-    return g.original.push(card);
-  });
-
-  el.innerHTML = `
-    <h3>ライブ</h3><div class="video-grid">${g.live.join("")}</div>
-    <h3>歌ってみた</h3><div class="video-grid">${g.uta.join("")}</div>
-    <h3>オリ曲 / 試聴</h3><div class="video-grid">${g.original.join("")}</div>
-    <h3>切り抜き</h3><div class="video-grid">${g.clip.join("")}</div>
-    <h3>ショート</h3><div class="video-grid">${g.shorts.join("")}</div>
-  `;
+function isClip(v) {
+  return (v.snippet?.title || "").toLowerCase().includes("切り抜き");
 }
 
 </script>
