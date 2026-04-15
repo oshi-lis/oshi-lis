@@ -8,34 +8,117 @@
 body {
   font-family: sans-serif;
   background: #f6f7fb;
+  margin: 0;
   padding: 20px;
   color: #222;
+}
+
+.card {
+  max-width: 900px;
+  margin: 0 auto;
+  background: white;
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+}
+
+/* ===== ヘッダー ===== */
+.top {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 10px;
+}
+
+.top img {
+  width: 80px;
+  height: 80px;
+  border-radius: 16px;
+  object-fit: cover;
+}
+
+.name {
+  font-size: 20px;
+  font-weight: bold;
+}
+
+.sub {
+  font-size: 12px;
+  color: #666;
+}
+
+/* ===== タブ ===== */
+.tabs {
+  display: flex;
+  gap: 10px;
+  margin-top: 15px;
+}
+
+.tab {
+  padding: 6px 12px;
+  background: #eee;
+  border-radius: 8px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.tab.active {
+  background: #222;
+  color: white;
+}
+
+/* ===== グリッド ===== */
+.section {
+  margin-top: 20px;
+}
+
+.section h3 {
+  font-size: 14px;
+  margin-bottom: 10px;
 }
 
 .video-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
-  margin-top: 10px;
+  gap: 10px;
 }
 
 .thumb img {
   width: 100%;
   aspect-ratio: 16/9;
-  object-fit: cover;
   border-radius: 8px;
+  object-fit: cover;
 }
 
 .title {
   font-size: 11px;
   margin-top: 4px;
+  line-height: 1.3;
 }
 </style>
 </head>
 
 <body>
 
-<div id="content">loading...</div>
+<div class="card">
+
+  <!-- ===== ヘッダー復活 ===== -->
+  <div class="top">
+    <img src="images/kaida.png">
+    <div>
+      <div class="name">推しまとめ</div>
+      <div class="sub">アーカイブ・動画分類</div>
+    </div>
+  </div>
+
+  <!-- ===== タブ ===== -->
+  <div class="tabs">
+    <div class="tab active" onclick="load()">アーカイブ更新</div>
+  </div>
+
+  <div id="content">loading...</div>
+
+</div>
 
 <script>
 
@@ -82,7 +165,8 @@ async function load() {
     `https://www.googleapis.com/youtube/v3/channels?part=contentDetails&id=${CHANNEL_ID}&key=${API_KEY}`
   ).then(r => r.json());
 
-  const uploads = ch?.items?.[0]?.contentDetails?.relatedPlaylists?.uploads;
+  const uploads =
+    ch?.items?.[0]?.contentDetails?.relatedPlaylists?.uploads;
 
   const pl = await fetch(
     `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet,contentDetails&playlistId=${uploads}&maxResults=50&key=${API_KEY}`
@@ -125,17 +209,17 @@ async function load() {
     const title = (v.snippet?.title || "").toLowerCase();
     const card = html(v);
 
-    /* ========================= */
+    /* ===== 1本化ルール ===== */
 
-    if (isLive(v)) return g.live.push(card);
     if (isShort(v)) return g.shorts.push(card);
+    if (isLive(v)) return g.live.push(card);
 
-    if (title.includes("切り抜き")) return g.clip.push(card);
+    if (title.includes("切り抜き"))
+      return g.clip.push(card);
 
     if (title.includes("歌ってみた"))
       return g.uta.push(card);
 
-    /* ★MV / 試聴は全部ここに統合 */
     if (
       title.includes("オリジナル") ||
       title.includes("mv") ||
@@ -146,16 +230,35 @@ async function load() {
       return g.original.push(card);
     }
 
-    /* ★完全吸収（オリ曲へ） */
+    /* ★完全吸収 */
     return g.original.push(card);
   });
 
   el.innerHTML = `
-    <h3>ライブ</h3><div class="video-grid">${g.live.join("")}</div>
-    <h3>歌ってみた</h3><div class="video-grid">${g.uta.join("")}</div>
-    <h3>オリ曲 / 試聴</h3><div class="video-grid">${g.original.join("")}</div>
-    <h3>切り抜き</h3><div class="video-grid">${g.clip.join("")}</div>
-    <h3>ショート</h3><div class="video-grid">${g.shorts.join("")}</div>
+    <div class="section">
+      <h3>ライブ</h3>
+      <div class="video-grid">${g.live.join("")}</div>
+    </div>
+
+    <div class="section">
+      <h3>歌ってみた</h3>
+      <div class="video-grid">${g.uta.join("")}</div>
+    </div>
+
+    <div class="section">
+      <h3>オリ曲 / 試聴</h3>
+      <div class="video-grid">${g.original.join("")}</div>
+    </div>
+
+    <div class="section">
+      <h3>切り抜き</h3>
+      <div class="video-grid">${g.clip.join("")}</div>
+    </div>
+
+    <div class="section">
+      <h3>ショート</h3>
+      <div class="video-grid">${g.shorts.join("")}</div>
+    </div>
   `;
 }
 
