@@ -168,7 +168,7 @@ function isOriginal(v){
   );
 }
 
-// ライブ（配信アーカイブ）
+// 配信アーカイブ
 function isLive(v){
   const t = v.t;
   const sec = v.duration;
@@ -277,7 +277,7 @@ async function loadArchive(){
   `).join("");
 
   el.innerHTML = `
-    <h3>ライブ（配信アーカイブ）</h3>
+    <h3>配信アーカイブ</h3>
     <div class="video-grid">${render(g.live)}</div>
 
     <h3>歌ってみた</h3>
