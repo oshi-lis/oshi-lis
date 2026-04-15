@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>三枝　明那</title>
+<title>甲斐田 晴</title>
 
 <style>
 body {
@@ -90,22 +90,21 @@ img {
 <div class="card">
 
   <div class="top">
-    <img src="images/akina.png">
+    <img src="images/kaida.png">
     <div>
-      <div class="name">三枝　明那</div>
+      <div class="name">甲斐田 晴</div>
       <div style="font-size:12px;color:#666;">歌・雑談・ゲーム配信</div>
     </div>
   </div>
 
   <!-- タブ -->
   <div class="tabs">
-    <div class="tab active" onclick="showTab(event, 'goods')">グッズ</div>
+    <div class="tab" onclick="showTab(event, 'goods')">グッズ</div>
     <div class="tab" onclick="showTab(event, 'song')">歌枠</div>
     <div class="tab" onclick="showTab(event, 'archive')">アーカイブ</div>
     <div class="tab" onclick="showTab(event, 'news')">お知らせ</div>
   </div>
 
-  <!-- 中身 -->
   <div class="content" id="content"></div>
 
   <a href="index.html" class="back">← Back</a>
@@ -113,6 +112,18 @@ img {
 </div>
 
 <script>
+
+/* =========================
+   API設定
+========================= */
+
+const CHANNEL_ID = "UCo2N7C-Z91waaR6lF3LL_jw";
+const API_KEY = "YOUR_API_KEY_HERE";
+
+/* =========================
+   UI用データ
+========================= */
+
 const data = {
   goods: [
     "誕生日グッズ2024",
@@ -122,31 +133,162 @@ const data = {
     "アニソン縛り歌枠",
     "深夜歌枠"
   ],
-  archive: [
-    "雑談配信",
-    "記念配信"
-  ],
   news: [
     "新衣装発表",
     "ライブ出演"
   ]
 };
 
+/* =========================
+   タブ（保存＋復元）
+========================= */
+
+window.addEventListener("load", () => {
+  const saved = localStorage.getItem("activeTab") || "goods";
+  showTab(null, saved);
+});
+
 function showTab(e, type) {
+
   document.querySelectorAll(".tab").forEach(tab => {
     tab.classList.remove("active");
   });
-  e.target.classList.add("active");
+
+  const tabs = document.querySelectorAll(".tab");
+  const map = { goods: 0, song: 1, archive: 2, news: 3 };
+  tabs[map[type]]?.classList.add("active");
+
+  localStorage.setItem("activeTab", type);
 
   const content = document.getElementById("content");
-  content.innerHTML =
-    "<ul>" +
-    data[type].map(item => `<li>${item}</li>`).join("") +
-    "</ul>";
+
+  if (type !== "archive") {
+    content.innerHTML =
+      "<ul>" +
+      data[type].map(item => `<li>${item}</li>`).join("") +
+      "</ul>";
+  } else {
+    loadArchive();
+  }
 }
 
-// 初期表示
-showTab({target: document.querySelector(".tab.active")}, "goods");
+/* =========================
+   YouTubeユーティリティ
+========================= */
+
+function parseDuration(d) {
+  if (!d) return 0;
+  const m = d.match(/PT(?:(\d+)M)?(?:(\d+)S)?/);
+  if (!m) return 0;
+  return (Number(m[1] || 0) * 60) + Number(m[2] || 0);
+}
+
+function isShort(v) {
+  return parseDuration(v.contentDetails?.duration) <= 60;
+}
+
+function isLive(v) {
+  const sec = parseDuration(v.contentDetails?.duration);
+  const title = (v.snippet?.title || "").toLowerCase();
+
+  return (
+    sec >= 3600 ||
+    title.includes("配信") ||
+    title.includes("ライブ") ||
+    title.includes("live") ||
+    title.includes("歌枠") ||
+    title.includes("雑談")
+  );
+}
+
+function isClip(v) {
+  return (v.snippet?.title || "").toLowerCase().includes("切り抜き");
+}
+
+function isSong(v) {
+  return (v.snippet?.title || "").toLowerCase().includes("歌ってみた");
+}
+
+function isOriginal(v) {
+  const t = (v.snippet?.title || "").toLowerCase();
+  return t.includes("オリジナル") || t.includes("mv") || t.includes("試聴");
+}
+
+/* =========================
+   アーカイブ取得
+========================= */
+
+async function loadArchive() {
+
+  const el = document.getElementById("content");
+
+  try {
+
+    el.innerHTML = "loading...";
+
+    const ch = await fetch(
+      `https://www.googleapis.com/youtube/v3/channels?part=contentDetails&id=${CHANNEL_ID}&key=${API_KEY}`
+    ).then(r => r.json());
+
+    const uploads =
+      ch?.items?.[0]?.contentDetails?.relatedPlaylists?.uploads;
+
+    const pl = await fetch(
+      `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet,contentDetails&playlistId=${uploads}&maxResults=50&key=${API_KEY}`
+    ).then(r => r.json());
+
+    const ids = (pl.items || [])
+      .map(v => v?.snippet?.resourceId?.videoId)
+      .filter(Boolean)
+      .join(",");
+
+    const vd = await fetch(
+      `https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails&id=${ids}&key=${API_KEY}`
+    ).then(r => r.json());
+
+    const videos = vd.items || [];
+
+    const groups = {
+      live: [],
+      song: [],
+      original: [],
+      clip: [],
+      short: []
+    };
+
+    videos.forEach(v => {
+
+      if (isShort(v)) return groups.short.push(v);
+      if (isLive(v)) return groups.live.push(v);
+      if (isSong(v)) return groups.song.push(v);
+      if (isClip(v)) return groups.clip.push(v);
+      if (isOriginal(v)) return groups.original.push(v);
+
+    });
+
+    const render = (arr) =>
+      arr.map(v => `<li>${v.snippet?.title || ""}</li>`).join("");
+
+    el.innerHTML = `
+      <ul>
+        <b>ライブ</b><br>${render(groups.live)}<br><br>
+
+        <b>歌ってみた</b><br>${render(groups.song)}<br><br>
+
+        <b>オリ曲 / 試聴</b><br>${render(groups.original)}<br><br>
+
+        <b>切り抜き</b><br>${render(groups.clip)}<br><br>
+
+        <b>ショート</b><br>${render(groups.short)}
+      </ul>
+    `;
+
+  } catch (e) {
+    console.error(e);
+    el.innerHTML = "読み込み失敗";
+  }
+}
+
 </script>
 
 </body>
