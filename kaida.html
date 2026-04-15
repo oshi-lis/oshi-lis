@@ -65,9 +65,10 @@ img.icon {
   margin-top: 15px;
 }
 
+/* ★ 3列表示 */
 .video-grid {
   display: grid;
-  grid-template-columns: repeat(2,1fr);
+  grid-template-columns: repeat(3,1fr);
   gap: 10px;
 }
 
@@ -109,11 +110,15 @@ img.icon {
     </div>
   </div>
 
+  <!-- タブ -->
   <div class="tabs">
-    <div class="tab active" onclick="load()">アーカイブ</div>
+    <div class="tab active" onclick="showTab(event, 'goods')">グッズ</div>
+    <div class="tab" onclick="showTab(event, 'song')">歌枠</div>
+    <div class="tab" onclick="showTab(event, 'archive')">アーカイブ</div>
+    <div class="tab" onclick="showTab(event, 'news')">お知らせ</div>
   </div>
 
-  <div class="content" id="content">loading...</div>
+  <div class="content" id="content"></div>
 
   <a href="index.html" class="back">← Back</a>
 
@@ -124,7 +129,43 @@ img.icon {
 const CHANNEL_ID = "UCo2N7C-Z91waaR6lF3LL_jw";
 const API_KEY = "AIzaSyDNqDI1bIEQpWahutCP_w3QpLoQvdcde78";
 
-/* ===== 全取得 ===== */
+const data = {
+  goods: ["誕生日グッズ2024","アクリルスタンド"],
+  song: ["アニソン縛り歌枠","深夜歌枠"],
+  news: ["新衣装発表","ライブ出演"]
+};
+
+/* タブ */
+function showTab(e, type) {
+
+  document.querySelectorAll(".tab").forEach(tab => {
+    tab.classList.remove("active");
+  });
+  e.target.classList.add("active");
+
+  const el = document.getElementById("content");
+
+  if(type === "archive"){
+    load();
+    return;
+  }
+
+  el.innerHTML =
+    "<ul>" +
+    (data[type]||[]).map(v => `<li>${v}</li>`).join("") +
+    "</ul>";
+}
+
+/* duration */
+function parseDuration(d){
+  if(!d) return 0;
+  const h=d.match(/(\d+)H/);
+  const m=d.match(/(\d+)M/);
+  const s=d.match(/(\d+)S/);
+  return (Number(h?.[1]||0)*3600)+(Number(m?.[1]||0)*60)+Number(s?.[1]||0);
+}
+
+/* 全取得 */
 async function getAllVideos(){
   const ch = await fetch(`https://www.googleapis.com/youtube/v3/channels?part=contentDetails&id=${CHANNEL_ID}&key=${API_KEY}`).then(r=>r.json());
   const uploads = ch.items[0].contentDetails.relatedPlaylists.uploads;
@@ -141,7 +182,7 @@ async function getAllVideos(){
   return all;
 }
 
-/* ===== 詳細 ===== */
+/* 詳細 */
 async function getDetails(ids){
   let all=[];
   for(let i=0;i<ids.length;i+=50){
@@ -152,16 +193,7 @@ async function getDetails(ids){
   return all;
 }
 
-/* ===== duration ===== */
-function parseDuration(d){
-  if(!d) return 0;
-  const h=d.match(/(\d+)H/);
-  const m=d.match(/(\d+)M/);
-  const s=d.match(/(\d+)S/);
-  return (Number(h?.[1]||0)*3600)+(Number(m?.[1]||0)*60)+Number(s?.[1]||0);
-}
-
-/* ===== メイン ===== */
+/* メイン */
 async function load(){
 
   const el = document.getElementById("content");
@@ -207,7 +239,8 @@ async function load(){
   }
 }
 
-load();
+/* 初期表示 */
+showTab({target: document.querySelector(".tab.active")}, "goods");
 
 </script>
 
