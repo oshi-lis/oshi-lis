@@ -179,32 +179,36 @@ async function loadArchive() {
     const API_KEY = "AIzaSyDNqDI1bIEQpWahutCP_w3QpLoQvdcde78";
 
     const url =
-      `https://www.googleapis.com/youtube/v3/search?` +
-      `key=${API_KEY}` +
-      `&channelId=${CHANNEL_ID}` +
-      `&part=snippet&order=date&maxResults=6&type=video`;
+      `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${CHANNEL_ID}&order=date&maxResults=12&type=video&key=${API_KEY}`;
 
     const res = await fetch(url);
     const data = await res.json();
 
-    // 🔥 画面デバッグ（ここ重要）
     if (!data.items || !Array.isArray(data.items)) {
       document.getElementById("content").innerHTML =
-        `<div class="debug">
-        ❌ APIエラー or 制限<br><br>
-        ${JSON.stringify(data, null, 2)}
-        </div>`;
+        `<pre style="color:red;">
+❌ APIエラー
+${JSON.stringify(data, null, 2)}
+        </pre>`;
       return;
     }
 
-    const videos = data.items.map(item => {
+    // =========================
+    // 分類
+    // =========================
+    const videos = [];
+    const shorts = [];
+    const lives = [];
+
+    data.items.forEach(item => {
 
       const videoId = item?.id?.videoId;
-      const title = item?.snippet?.title;
+      const title = item?.snippet?.title || "";
+      const live = item?.snippet?.liveBroadcastContent;
 
-      if (!videoId) return "";
+      if (!videoId) return;
 
-      return `
+      const html = `
         <div>
           <div class="thumb">
             <img src="https://i.ytimg.com/vi/${videoId}/hqdefault.jpg">
@@ -216,25 +220,45 @@ async function loadArchive() {
           </div>
         </div>
       `;
-    }).join("");
 
-    document.getElementById("content").innerHTML =
-      `<div class="video-grid">${videos}</div>`;
+      if (live === "live") {
+        lives.push(html);
+      } else if (title.toLowerCase().includes("#shorts")) {
+        shorts.push(html);
+      } else {
+        videos.push(html);
+      }
+    });
+
+    // =========================
+    // 表示
+    // =========================
+    document.getElementById("content").innerHTML = `
+      <div style="margin-bottom:20px;">
+        <h3>🎬 動画</h3>
+        <div class="video-grid">${videos.join("")}</div>
+      </div>
+
+      <div style="margin-bottom:20px;">
+        <h3>🎞 ショート</h3>
+        <div class="video-grid">${shorts.join("")}</div>
+      </div>
+
+      <div>
+        <h3>🔴 ライブ</h3>
+        <div class="video-grid">${lives.join("")}</div>
+      </div>
+    `;
 
   } catch (e) {
 
     document.getElementById("content").innerHTML =
-      `<div class="debug">
-      ❌ 通信エラー<br><br>
-      ${e.message}
-      </div>`;
+      `<pre style="color:red;">
+❌ 通信エラー
+${e.message}
+      </pre>`;
   }
 }
-
-/* =========================
-   初期表示（リロード固定）
-========================= */
-render();
 
 </script>
 
