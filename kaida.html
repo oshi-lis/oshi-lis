@@ -100,7 +100,6 @@ h3 {
   margin: 20px 0 10px;
   font-size: 14px;
 }
-
 </style>
 </head>
 
@@ -130,6 +129,7 @@ h3 {
 <script>
 
 const CHANNEL_ID = "UCo2N7C-Z91waaR6lF3LL_jw";
+const API_KEY = "AIzaSyDNqDI1bIEQpWahutCP_w3QpLoQvdcde78";
 
 let currentTab = "goods";
 
@@ -144,9 +144,6 @@ function setTab(tab) {
   render();
 }
 
-/* =========================
-   初期描画
-========================= */
 render();
 
 /* =========================
@@ -171,7 +168,7 @@ function render() {
 }
 
 /* =========================
-   アーカイブ（完全版）
+   アーカイブ（完全安定版）
 ========================= */
 async function loadArchive() {
 
@@ -179,52 +176,43 @@ async function loadArchive() {
 
   try {
 
-    const API_KEY = "AIzaSyDNqDI1bIEQpWahutCP_w3QpLoQvdcde78";
-
-    function normalize(text = "") {
-      return text.toLowerCase();
-    }
-
-    function matchAny(text, list) {
-      const t = normalize(text);
-      return list.some(w => t.includes(w));
-    }
-
-    function isShort(duration) {
-      const match = duration.match(/PT(?:(\d+)M)?(?:(\d+)S)?/);
-      const m = parseInt(match?.[1] || "0");
-      const s = parseInt(match?.[2] || "0");
-      return m === 0 && s <= 60;
-    }
-
-    const RULES = {
-      live: ["歌枠", "配信", "雑談", "live", "ライブ", "stream"],
-      uta: ["歌ってみた", "cover"],
-      original: ["オリジナル", "mv", "music video"],
-      clip: ["切り抜き", "clip", "highlight"],
-      shorts: ["#shorts", "shorts"]
-    };
-
-    // search
-    const searchRes = await fetch(
-      `https://www.googleapis.com/youtube/v3/search?part=snippet` +
-      `&channelId=${CHANNEL_ID}&order=date&type=video&maxResults=12&key=${API_KEY}`
+    // =========================
+    // ① uploads取得
+    // =========================
+    const chRes = await fetch(
+      `https://www.googleapis.com/youtube/v3/channels?part=contentDetails&id=${CHANNEL_ID}&key=${API_KEY}`
     );
 
-    const searchData = await searchRes.json();
+    const chData = await chRes.json();
 
-    const ids = searchData.items
-      .map(v => v.id?.videoId)
-      .filter(Boolean)
+    const uploadsId =
+      chData.items[0].contentDetails.relatedPlaylists.uploads;
+
+    // =========================
+    // ② playlist取得
+    // =========================
+    const plRes = await fetch(
+      `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId=${uploadsId}&maxResults=20&key=${API_KEY}`
+    );
+
+    const plData = await plRes.json();
+
+    const ids = plData.items
+      .map(v => v.snippet.resourceId.videoId)
       .join(",");
 
-    // videos
-    const videoRes = await fetch(
+    // =========================
+    // ③ videos詳細取得
+    // =========================
+    const vRes = await fetch(
       `https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails&id=${ids}&key=${API_KEY}`
     );
 
-    const videoData = await videoRes.json();
+    const vData = await vRes.json();
 
+    // =========================
+    // 分類
+    // =========================
     const groups = {
       live: [],
       shorts: [],
@@ -234,57 +222,67 @@ async function loadArchive() {
       other: []
     };
 
-    function html(v) {
-      return `
+    function isShort(duration) {
+      const m = duration.match(/PT(?:(\d+)M)?(?:(\d+)S)?/);
+      const min = parseInt(m?.[1] || "0");
+      const sec = parseInt(m?.[2] || "0");
+      return min === 0 && sec <= 60;
+    }
+
+    function match(text, list) {
+      return list.some(w => text.toLowerCase().includes(w));
+    }
+
+    vData.items.forEach(v => {
+
+      const title = v.snippet.title || "";
+      const duration = v.contentDetails.duration;
+      const live = v.snippet.liveBroadcastContent;
+
+      const html = `
         <div>
           <div class="thumb">
             <img src="https://i.ytimg.com/vi/${v.id}/hqdefault.jpg">
           </div>
           <div class="title">
             <a href="https://www.youtube.com/watch?v=${v.id}" target="_blank">
-              ${v.snippet.title}
+              ${title}
             </a>
           </div>
         </div>
       `;
-    }
 
-    videoData.items.forEach(v => {
-
-      const title = v.snippet.title || "";
-      const duration = v.contentDetails.duration;
-      const live = v.snippet.liveBroadcastContent;
-
-      const card = html(v);
-
-      if (isShort(duration) || matchAny(title, RULES.shorts)) {
-        groups.shorts.push(card);
+      if (isShort(duration) || title.includes("#shorts")) {
+        groups.shorts.push(html);
         return;
       }
 
-      if (live === "live" || matchAny(title, RULES.live)) {
-        groups.live.push(card);
+      if (live === "live" || match(title, ["歌枠","配信","雑談","live","stream"])) {
+        groups.live.push(html);
         return;
       }
 
-      if (matchAny(title, RULES.uta)) {
-        groups.uta.push(card);
+      if (match(title, ["歌ってみた","cover"])) {
+        groups.uta.push(html);
         return;
       }
 
-      if (matchAny(title, RULES.original)) {
-        groups.original.push(card);
+      if (match(title, ["オリジナル","mv","music video"])) {
+        groups.original.push(html);
         return;
       }
 
-      if (matchAny(title, RULES.clip)) {
-        groups.clip.push(card);
+      if (match(title, ["切り抜き","clip","highlight"])) {
+        groups.clip.push(html);
         return;
       }
 
-      groups.other.push(card);
+      groups.other.push(html);
     });
 
+    // =========================
+    // 表示
+    // =========================
     document.getElementById("content").innerHTML = `
 
       <div>
