@@ -178,37 +178,60 @@ async function loadArchive() {
 
     const API_KEY = "AIzaSyDNqDI1bIEQpWahutCP_w3QpLoQvdcde78";
 
-    const url =
-      `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${CHANNEL_ID}&order=date&maxResults=12&type=video&key=${API_KEY}`;
+    // =========================
+    // ① search（動画ID取得）
+    // =========================
+    const searchUrl =
+      `https://www.googleapis.com/youtube/v3/search?part=snippet` +
+      `&channelId=${CHANNEL_ID}` +
+      `&order=date&type=video&maxResults=12&key=${API_KEY}`;
 
-    const res = await fetch(url);
-    const data = await res.json();
+    const searchRes = await fetch(searchUrl);
+    const searchData = await searchRes.json();
 
-    if (!data.items || !Array.isArray(data.items)) {
-      document.getElementById("content").innerHTML =
-        `<pre style="color:red;">
-❌ APIエラー
-${JSON.stringify(data, null, 2)}
-        </pre>`;
-      return;
+    if (!searchData.items) {
+      throw new Error(JSON.stringify(searchData));
+    }
+
+    const ids = searchData.items
+      .map(v => v.id?.videoId)
+      .filter(Boolean)
+      .join(",");
+
+    // =========================
+    // ② videos（詳細取得）
+    // =========================
+    const videoUrl =
+      `https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails&id=${ids}&key=${API_KEY}`;
+
+    const videoRes = await fetch(videoUrl);
+    const videoData = await videoRes.json();
+
+    if (!videoData.items) {
+      throw new Error(JSON.stringify(videoData));
     }
 
     // =========================
-    // 分類
+    // 分類用配列
     // =========================
-    const videos = [];
-    const shorts = [];
-    const lives = [];
+    const groups = {
+      live: [],
+      shorts: [],
+      uta: [],
+      original: [],
+      clip: [],
+      other: []
+    };
 
-    data.items.forEach(item => {
+    // =========================
+    // HTML生成
+    // =========================
+    function createHTML(v) {
 
-      const videoId = item?.id?.videoId;
-      const title = item?.snippet?.title || "";
-      const live = item?.snippet?.liveBroadcastContent;
+      const videoId = v.id;
+      const title = v.snippet.title;
 
-      if (!videoId) return;
-
-      const html = `
+      return `
         <div>
           <div class="thumb">
             <img src="https://i.ytimg.com/vi/${videoId}/hqdefault.jpg">
@@ -220,41 +243,120 @@ ${JSON.stringify(data, null, 2)}
           </div>
         </div>
       `;
+    }
 
-      if (live === "live") {
-        lives.push(html);
-      } else if (title.toLowerCase().includes("#shorts")) {
-        shorts.push(html);
-      } else {
-        videos.push(html);
+    // =========================
+    // ショート判定
+    // =========================
+    function isShort(duration) {
+      const match = duration.match(/PT(?:(\d+)M)?(?:(\d+)S)?/);
+      const m = parseInt(match?.[1] || "0");
+      const s = parseInt(match?.[2] || "0");
+      return m === 0 && s <= 60;
+    }
+
+    // =========================
+    // 分類処理
+    // =========================
+    videoData.items.forEach(v => {
+
+      const title = v.snippet.title || "";
+      const duration = v.contentDetails.duration;
+      const live = v.snippet.liveBroadcastContent;
+
+      const html = createHTML(v);
+
+      // shorts
+      if (isShort(duration) || title.includes("#shorts")) {
+        groups.shorts.push(html);
+        return;
       }
+
+      // live
+      if (
+        live === "live" ||
+        title.includes("歌枠") ||
+        title.includes("配信") ||
+        title.includes("雑談")
+      ) {
+        groups.live.push(html);
+        return;
+      }
+
+      // uta (歌ってみた)
+      if (
+        title.includes("歌ってみた") ||
+        title.toLowerCase().includes("cover")
+      ) {
+        groups.uta.push(html);
+        return;
+      }
+
+      // original
+      if (
+        title.includes("オリジナル") ||
+        title.toLowerCase().includes("mv")
+      ) {
+        groups.original.push(html);
+        return;
+      }
+
+      // clip
+      if (
+        title.includes("切り抜き") ||
+        title.includes("clip") ||
+        title.includes("highlight")
+      ) {
+        groups.clip.push(html);
+        return;
+      }
+
+      // other
+      groups.other.push(html);
     });
 
     // =========================
     // 表示
     // =========================
     document.getElementById("content").innerHTML = `
-      <div style="margin-bottom:20px;">
-        <h3>🎬 動画</h3>
-        <div class="video-grid">${videos.join("")}</div>
-      </div>
 
-      <div style="margin-bottom:20px;">
-        <h3>🎞 ショート</h3>
-        <div class="video-grid">${shorts.join("")}</div>
+      <div>
+        <h3>ライブ配信</h3>
+        <div class="video-grid">${groups.live.join("")}</div>
       </div>
 
       <div>
-        <h3>🔴 ライブ</h3>
-        <div class="video-grid">${lives.join("")}</div>
+        <h3>ショート</h3>
+        <div class="video-grid">${groups.shorts.join("")}</div>
       </div>
+
+      <div>
+        <h3>歌ってみた</h3>
+        <div class="video-grid">${groups.uta.join("")}</div>
+      </div>
+
+      <div>
+        <h3>オリジナル曲</h3>
+        <div class="video-grid">${groups.original.join("")}</div>
+      </div>
+
+      <div>
+        <h3>切り抜き</h3>
+        <div class="video-grid">${groups.clip.join("")}</div>
+      </div>
+
+      <div>
+        <h3>その他</h3>
+        <div class="video-grid">${groups.other.join("")}</div>
+      </div>
+
     `;
 
   } catch (e) {
 
     document.getElementById("content").innerHTML =
       `<pre style="color:red;">
-❌ 通信エラー
+エラー
 ${e.message}
       </pre>`;
   }
