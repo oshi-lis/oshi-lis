@@ -82,6 +82,17 @@ img {
   color: #666;
   text-decoration: none;
 }
+
+/* ★デバッグ表示（スマホ用） */
+#debug {
+  font-size: 12px;
+  background: #111;
+  color: #0f0;
+  padding: 10px;
+  white-space: pre-wrap;
+  margin-bottom: 10px;
+  border-radius: 8px;
+}
 </style>
 </head>
 
@@ -104,6 +115,7 @@ img {
     <div class="tab" onclick="showTab(event, 'news')">お知らせ</div>
   </div>
 
+  <div id="debug"></div>
   <div class="content" id="content"></div>
 
   <a href="index.html" class="back">← Back</a>
@@ -122,7 +134,7 @@ function saveTab(t){ localStorage.setItem("tab", t); }
 function getTab(){ return localStorage.getItem("tab") || "goods"; }
 
 /* =========================
-   時間変換
+   時間
 ========================= */
 function parseDuration(d){
   if(!d) return Infinity;
@@ -147,30 +159,24 @@ function normalizeVideo(v){
 }
 
 /* =========================
-   分類（完全分離・1動画1枠）
+   分類（完全分離）
 ========================= */
-
-// 切り抜き（最優先）
 function isClip(v){
   return v.title.includes("切り抜き") || v.title.includes("clip");
 }
 
-// オリ曲 / 試聴
 function isOriginal(v){
   return v.title.includes("オリジナル") || v.title.includes("mv") || v.title.includes("試聴");
 }
 
-// 歌ってみた
 function isSong(v){
   return v.title.includes("歌ってみた") || v.title.includes("cover");
 }
 
-// ライブ
 function isLive(v){
   return v.liveStatus === "live" || v.liveStatus === "upcoming";
 }
 
-// ショート（最後）
 function isShort(v){
   return v.duration <= 60;
 }
@@ -202,6 +208,7 @@ function showTab(e,type){
     document.getElementById("content").innerHTML =
       "<ul>" + (data[type]||[]).map(v=>`<li>${v}</li>`).join("") + "</ul>";
 
+    document.getElementById("debug").textContent = "";
     return;
   }
 
@@ -245,7 +252,6 @@ async function loadArchive(){
   videos.forEach(v=>{
     const nv = normalizeVideo(v);
 
-    // 完全分離（1動画＝1カテゴリ）
     if(isClip(nv)) return g.clip.push(v);
     if(isOriginal(nv)) return g.original.push(v);
     if(isSong(nv)) return g.song.push(v);
@@ -253,11 +259,13 @@ async function loadArchive(){
     if(isShort(nv)) return g.short.push(v);
   });
 
-console.log("LIVE", g.live.map(v=>v.snippet.title));
-console.log("CLIP", g.clip.map(v=>v.snippet.title));
-console.log("SONG", g.song.map(v=>v.snippet.title));
-console.log("ORIGINAL", g.original.map(v=>v.snippet.title));
-console.log("SHORT", g.short.map(v=>v.snippet.title));
+  // ★スマホ表示デバッグ（ここが重要）
+  document.getElementById("debug").textContent =
+"LIVE:\n" + g.live.map(v=>v.snippet.title).join("\n") + "\n\n" +
+"CLIP:\n" + g.clip.map(v=>v.snippet.title).join("\n") + "\n\n" +
+"SONG:\n" + g.song.map(v=>v.snippet.title).join("\n") + "\n\n" +
+"ORIGINAL:\n" + g.original.map(v=>v.snippet.title).join("\n") + "\n\n" +
+"SHORT:\n" + g.short.map(v=>v.snippet.title).join("\n");
 
   const render=a=>a.map(v=>`
     <div class="thumb">
