@@ -132,42 +132,29 @@ const data = {
 };
 
 /* -------------------------
-   保存
+   タブ保存
 ------------------------- */
 function saveTab(type) {
   localStorage.setItem("lastTab", type);
 }
 
-/* -------------------------
-   読み込み
-------------------------- */
 function getSavedTab() {
   return localStorage.getItem("lastTab") || "goods";
 }
 
 /* -------------------------
-   タブ表示（ここが本体）
+   タブ切り替え
 ------------------------- */
 function showTab(event, type) {
 
   saveTab(type);
 
-  // 全タブの見た目リセット
-  document.querySelectorAll(".tab").forEach(tab => {
-    tab.classList.remove("active");
-  });
+  document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
 
-  // active復元（ここが重要）
-  document.querySelectorAll(".tab").forEach(tab => {
-    if (tab.textContent.includes(type === "goods" ? "グッズ" :
-                                type === "song" ? "歌枠" :
-                                type === "archive" ? "アーカイブ" :
-                                "お知らせ")) {
-      tab.classList.add("active");
-    }
-  });
+  if (event && event.target) {
+    event.target.classList.add("active");
+  }
 
-  // 表示切替
   if (type === "archive") {
     loadArchive();
     return;
@@ -176,3 +163,61 @@ function showTab(event, type) {
   const list = data[type] || [];
 
   document.getElementById("content").innerHTML =
+    "<ul>" + list.map(v => `<li>${v}</li>`).join("") + "</ul>";
+}
+
+/* -------------------------
+   YouTube RSS（完全安定版）
+------------------------- */
+async function loadArchive() {
+
+  document.getElementById("content").innerHTML = "読み込み中...";
+
+  const res = await fetch(
+    "https://www.youtube.com/feeds/videos.xml?channel_id=" + CHANNEL_ID
+  );
+
+  const text = await res.text();
+
+  const xml = new DOMParser().parseFromString(text, "text/xml");
+
+  const entries = [...xml.querySelectorAll("entry")];
+
+  const videos = entries.slice(0, 6).map(e => {
+
+    const title = e.querySelector("title")?.textContent;
+    const link = e.querySelector("link")?.getAttribute("href");
+
+    // ★RSSのIDから直接取る（ここが安定ポイント）
+    const id = e.querySelector("yt\\:videoId")?.textContent;
+
+    if (!id) return "";
+
+    return `
+      <div>
+        <div class="thumb">
+          <img src="https://i.ytimg.com/vi/${id}/hqdefault.jpg">
+        </div>
+        <div class="title">
+          <a href="${link}" target="_blank">${title}</a>
+        </div>
+      </div>
+    `;
+  }).join("");
+
+  document.getElementById("content").innerHTML =
+    `<div class="video-grid">${videos}</div>`;
+}
+
+/* -------------------------
+   初期表示（復元）
+------------------------- */
+(function init() {
+  const saved = getSavedTab();
+  showTab({ target: document.querySelector(".tab") }, saved);
+})();
+
+</script>
+
+</body>
+</html>
