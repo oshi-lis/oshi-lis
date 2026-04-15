@@ -74,14 +74,6 @@ img {
   border-radius: 8px;
   object-fit: cover;
 }
-
-.back {
-  display: inline-block;
-  margin-top: 20px;
-  font-size: 13px;
-  color: #666;
-  text-decoration: none;
-}
 </style>
 </head>
 
@@ -106,8 +98,6 @@ img {
 
   <div class="content" id="content"></div>
 
-  <a href="index.html" class="back">← Back</a>
-
 </div>
 
 <script>
@@ -116,23 +106,7 @@ const CHANNEL_ID = "UCo2N7C-Z91waaR6lF3LL_jw";
 const API_KEY = "AIzaSyDNqDI1bIEQpWahutCP_w3QpLoQvdcde78";
 
 /* =========================
-   タブ保存
-========================= */
-function saveTab(t){ localStorage.setItem("tab", t); }
-function getTab(){ return localStorage.getItem("tab") || "goods"; }
-
-/* =========================
-   時間変換
-========================= */
-function parseDuration(d){
-  if(!d) return Infinity;
-  const m = d.match(/PT(?:(\d+)M)?(?:(\d+)S)?/);
-  if(!m) return Infinity;
-  return (Number(m[1]||0)*60 + Number(m[2]||0));
-}
-
-/* =========================
-   タイトル正規化（超重要）
+   タイトル正規化
 ========================= */
 function normalizeTitle(title){
   return (title || "")
@@ -143,7 +117,7 @@ function normalizeTitle(title){
 }
 
 /* =========================
-   正規化データ
+   動画正規化
 ========================= */
 function normalizeVideo(v){
   const title = v.snippet?.title || "";
@@ -156,12 +130,28 @@ function normalizeVideo(v){
 }
 
 /* =========================
+   時間
+========================= */
+function parseDuration(d){
+  if(!d) return Infinity;
+  const m = d.match(/PT(?:(\d+)M)?(?:(\d+)S)?/);
+  if(!m) return Infinity;
+  return (Number(m[1]||0)*60 + Number(m[2]||0));
+}
+
+/* =========================
    分類ルール
 ========================= */
 
-// 切り抜き
+// 切り抜き（完全安定版）
 function isClip(v){
-  return v.t.includes("切り抜き") || v.t.includes("clip");
+  const t = v.t.replace(/\//g, ""); // ←重要ポイント
+
+  return (
+    t.includes("切り抜き") ||
+    t.includes("clip") ||
+    t.includes("ハイライト")
+  );
 }
 
 // 歌ってみた
@@ -171,10 +161,14 @@ function isSong(v){
 
 // オリ曲 / MV / 試聴
 function isOriginal(v){
-  return v.t.includes("オリジナル") || v.t.includes("mv") || v.t.includes("試聴");
+  return (
+    v.t.includes("オリジナル") ||
+    v.t.includes("mv") ||
+    v.t.includes("試聴")
+  );
 }
 
-// ライブ（アーカイブ配信扱い）
+// ライブ（配信アーカイブ）
 function isLive(v){
   const t = v.t;
   const sec = v.duration;
@@ -192,7 +186,7 @@ function isLive(v){
   );
 }
 
-// ショート（厳密）
+// ショート
 function isShort(v){
   return v.duration > 0 && v.duration <= 60;
 }
@@ -201,7 +195,7 @@ function isShort(v){
    初期化
 ========================= */
 window.addEventListener("load", ()=>{
-  showTab(null, getTab());
+  showTab(null, "archive");
 });
 
 /* =========================
@@ -214,8 +208,6 @@ function showTab(e,type){
   const map=["goods","song","archive","news"];
   const idx = map.indexOf(type);
   if(idx>=0) document.querySelectorAll(".tab")[idx].classList.add("active");
-
-  saveTab(type);
 
   if(type !== "archive"){
     const data={
