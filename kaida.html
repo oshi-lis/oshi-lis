@@ -147,7 +147,7 @@ function setTab(tab) {
 render();
 
 /* =========================
-   UI描画
+   UI
 ========================= */
 function render() {
 
@@ -177,7 +177,7 @@ async function loadArchive() {
   try {
 
     // =========================
-    // ① uploads取得
+    // ① uploads取得（ここが本体）
     // =========================
     const chRes = await fetch(
       `https://www.googleapis.com/youtube/v3/channels?part=contentDetails&id=${CHANNEL_ID}&key=${API_KEY}`
@@ -205,79 +205,82 @@ async function loadArchive() {
     // ③ videos詳細取得
     // =========================
     const vRes = await fetch(
-      `https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails&id=${ids}&key=${API_KEY}`
+      `https://www.googleapis.com/youtube/v3/videos?part=snippet&id=${ids}&key=${API_KEY}`
     );
 
     const vData = await vRes.json();
 
     // =========================
-    // 分類
+    // 分類ルール（タイトルのみ）
     // =========================
     const groups = {
       live: [],
-      shorts: [],
       uta: [],
       original: [],
       clip: [],
+      shorts: [],
       other: []
     };
 
-    function isShort(duration) {
-      const m = duration.match(/PT(?:(\d+)M)?(?:(\d+)S)?/);
-      const min = parseInt(m?.[1] || "0");
-      const sec = parseInt(m?.[2] || "0");
-      return min === 0 && sec <= 60;
+    function match(title, list) {
+      const t = (title || "").toLowerCase();
+      return list.some(w => t.includes(w));
     }
 
-    function match(text, list) {
-      return list.some(w => text.toLowerCase().includes(w));
-    }
-
-    vData.items.forEach(v => {
-
-      const title = v.snippet.title || "";
-      const duration = v.contentDetails.duration;
-      const live = v.snippet.liveBroadcastContent;
-
-      const html = `
+    function html(v) {
+      return `
         <div>
           <div class="thumb">
             <img src="https://i.ytimg.com/vi/${v.id}/hqdefault.jpg">
           </div>
           <div class="title">
             <a href="https://www.youtube.com/watch?v=${v.id}" target="_blank">
-              ${title}
+              ${v.snippet.title}
             </a>
           </div>
         </div>
       `;
+    }
 
-      if (isShort(duration) || title.includes("#shorts")) {
-        groups.shorts.push(html);
+    // =========================
+    // 分類（重要：順番）
+    // =========================
+    vData.items.forEach(v => {
+
+      const title = v.snippet.title || "";
+      const htmlCard = html(v);
+
+      // ① ライブ（最優先）
+      if (match(title, ["歌枠", "配信", "雑談", "live", "stream", "ライブ"])) {
+        groups.live.push(htmlCard);
         return;
       }
 
-      if (live === "live" || match(title, ["歌枠","配信","雑談","live","stream"])) {
-        groups.live.push(html);
+      // ② 歌ってみた
+      if (match(title, ["歌ってみた", "cover"])) {
+        groups.uta.push(htmlCard);
         return;
       }
 
-      if (match(title, ["歌ってみた","cover"])) {
-        groups.uta.push(html);
+      // ③ オリ曲
+      if (match(title, ["オリジナル", "mv", "music video", "original"])) {
+        groups.original.push(htmlCard);
         return;
       }
 
-      if (match(title, ["オリジナル","mv","music video"])) {
-        groups.original.push(html);
+      // ④ 切り抜き
+      if (match(title, ["切り抜き", "clip", "highlight", "まとめ"])) {
+        groups.clip.push(htmlCard);
         return;
       }
 
-      if (match(title, ["切り抜き","clip","highlight"])) {
-        groups.clip.push(html);
+      // ⑤ shorts（完全タイトルのみ）
+      if (match(title, ["#shorts", "shorts"])) {
+        groups.shorts.push(htmlCard);
         return;
       }
 
-      groups.other.push(html);
+      groups.other.push(htmlCard);
     });
 
     // =========================
@@ -288,11 +291,6 @@ async function loadArchive() {
       <div>
         <h3>ライブ配信</h3>
         <div class="video-grid">${groups.live.join("")}</div>
-      </div>
-
-      <div>
-        <h3>ショート</h3>
-        <div class="video-grid">${groups.shorts.join("")}</div>
       </div>
 
       <div>
@@ -308,6 +306,11 @@ async function loadArchive() {
       <div>
         <h3>切り抜き</h3>
         <div class="video-grid">${groups.clip.join("")}</div>
+      </div>
+
+      <div>
+        <h3>ショート</h3>
+        <div class="video-grid">${groups.shorts.join("")}</div>
       </div>
 
       <div>
