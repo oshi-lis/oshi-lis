@@ -70,15 +70,7 @@ img {
   margin-bottom: 6px;
 }
 
-.back {
-  display: inline-block;
-  margin-top: 20px;
-  font-size: 13px;
-  color: #666;
-  text-decoration: none;
-}
-
-/* pagination fixed style */
+/* pagination */
 .pagination {
   margin-top: 12px;
   display: flex;
@@ -127,42 +119,26 @@ img {
 
 <script>
 
-/* API KEY（埋め込み固定） */
-const API_KEY = "YOUR_API_KEY_HERE";
+const API_KEY = "AIzaSyDNqDI1bIEQpWahutCP_w3QpLoQvdcde78";
 const CHANNEL_ID = "UCo2N7C-Z91waaR6fL3LL_jw";
 
-/* 固定データ */
-const data = {
-  goods: ["グッズ1", "グッズ2"],
-  song: ["歌枠1", "歌枠2"],
-  news: ["お知らせ1", "お知らせ2"]
-};
-
-/* state */
 let state = {
   tab: "archive",
   page: 1,
-  videos: []
+  videos: {
+    normal: [],
+    song: [],
+    original: [],
+    shorts: []
+  }
 };
 
-/* =====================
-   tab restore
-===================== */
 window.onload = () => {
   const saved = localStorage.getItem("tab") || "archive";
   switchTab(saved);
 };
 
-/* =====================
-   tab switch
-===================== */
-async function switchTab(tab){
-
-  state.tab = tab;
-  state.page = 1;
-
-  localStorage.setItem("tab", tab);
-
+function setActiveTab(tab){
   document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
   document.querySelectorAll(".tab").forEach(t => {
     if(t.textContent.includes(
@@ -173,28 +149,42 @@ async function switchTab(tab){
       t.classList.add("active");
     }
   });
+}
+
+async function switchTab(tab){
+
+  state.tab = tab;
+  state.page = 1;
+
+  localStorage.setItem("tab", tab);
+
+  setActiveTab(tab);
 
   const content = document.getElementById("content");
 
   if(tab !== "archive"){
-    content.innerHTML =
-      "<ul>" +
-      (data[tab] || []).map(v => `<li>${v}</li>`).join("") +
+    content.innerHTML = "<ul>" +
+      (tabData(tab)).map(v => `<li>${v}</li>`).join("") +
       "</ul>";
     return;
   }
 
   content.innerHTML = "loading...";
 
-  const videos = await fetchVideos();
-  state.videos = classify(videos);
+  const items = await fetchVideos();
+  state.videos = classify(items);
 
   renderArchive();
 }
 
-/* =====================
-   YouTube fetch
-===================== */
+function tabData(tab){
+  return {
+    song: ["歌枠1", "歌枠2"],
+    goods: ["グッズ1", "グッズ2"],
+    news: ["お知らせ1", "お知らせ2"]
+  }[tab] || [];
+}
+
 async function fetchVideos(){
 
   const ch = await fetch(
@@ -210,67 +200,56 @@ async function fetchVideos(){
   return res.items || [];
 }
 
-/* =====================
-   classification restore
-===================== */
 function classify(items){
 
   return {
-    all: items,
-    archive: items.filter(v => !isShort(v)),
-    sing: items.filter(v => /歌|sing|cover/i.test(v.snippet.title)),
-    original: items.filter(v => /オリ|original/i.test(v.snippet.title)),
+    normal: items.filter(v =>
+      !isShort(v) && !isSong(v) && !isOriginal(v)
+    ),
+
+    song: items.filter(v => isSong(v)),
+    original: items.filter(v => isOriginal(v)),
     shorts: items.filter(v => isShort(v))
   };
 }
 
 function isShort(v){
-  return v.snippet.title.toLowerCase().includes("short");
+  return /short/i.test(v.snippet.title);
 }
 
-/* =====================
-   archive render
-===================== */
+function isSong(v){
+  return /歌|cover|sing/i.test(v.snippet.title);
+}
+
+function isOriginal(v){
+  return /オリジナル|original/i.test(v.snippet.title);
+}
+
 function renderArchive(){
 
   const PER_PAGE = 6;
-  const list = state.videos.archive || [];
+  const list = state.videos.normal;
 
   const start = (state.page - 1) * PER_PAGE;
   const items = list.slice(start, start + PER_PAGE);
 
-  const content = document.getElementById("content");
+  const total = Math.ceil(list.length / PER_PAGE);
 
-  content.innerHTML = `
+  let pages = "";
+
+  for(let i = 1; i <= total; i++){
+    const label = (i === total) ? `${i}〜` : i;
+    pages += `<span class="page ${i===state.page?'active':''}" onclick="goPage(${i})">${label}</span>`;
+  }
+
+  document.getElementById("content").innerHTML = `
     <ul>
       ${items.map(v => `<li>${v.snippet.title}</li>`).join("")}
     </ul>
-
-    <div class="pagination">
-      ${renderPages()}
-    </div>
+    <div class="pagination">${pages}</div>
   `;
 }
 
-/* =====================
-   fixed pagination 1-11〜
-===================== */
-function renderPages(){
-
-  let html = "";
-
-  for(let i = 1; i <= 11; i++){
-    html += `<span class="page ${i===state.page?'active':''}" onclick="goPage(${i})">${i}</span>`;
-  }
-
-  html += `<span class="page">〜</span>`;
-
-  return html;
-}
-
-/* =====================
-   page control
-===================== */
 function goPage(p){
   state.page = p;
   renderArchive();
