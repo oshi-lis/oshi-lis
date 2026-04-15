@@ -2,49 +2,57 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>アーカイブ</title>
+<title>甲斐田 晴</title>
 
 <style>
 body {
   font-family: sans-serif;
   background: #f6f7fb;
-  margin: 0;
-  padding: 0;
-}
-
-/* ===== UI ===== */
-.header {
-  text-align: center;
   padding: 20px;
+  color: #222;
+}
+
+.card {
+  max-width: 600px;
+  margin: 0 auto;
   background: white;
-}
-
-.header img {
-  width: 80px;
-  height: 80px;
+  padding: 20px;
   border-radius: 16px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.1);
 }
 
-.desc {
-  font-size: 12px;
-  color: #666;
+/* 上部 */
+.top {
+  display: flex;
+  gap: 16px;
+  align-items: center;
 }
 
+img {
+  width: 100px;
+  height: 100px;
+  border-radius: 16px;
+  object-fit: cover;
+}
+
+.name {
+  font-size: 20px;
+  font-weight: bold;
+}
+
+/* タブ */
 .tabs {
   display: flex;
-  justify-content: center;
   gap: 10px;
-  background: white;
-  padding: 10px;
-  border-top: 1px solid #eee;
+  margin-top: 20px;
 }
 
 .tab {
-  padding: 6px 12px;
+  padding: 6px 10px;
   background: #eee;
   border-radius: 8px;
-  cursor: pointer;
   font-size: 13px;
+  cursor: pointer;
 }
 
 .tab.active {
@@ -52,57 +60,120 @@ body {
   color: white;
 }
 
+/* 中身 */
 .content {
-  padding: 20px;
+  margin-top: 15px;
 }
 
-.video-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
+.content ul {
+  padding-left: 18px;
+}
+
+.content li {
+  margin-bottom: 6px;
+}
+
+/* 戻る */
+.back {
+  display: inline-block;
+  margin-top: 20px;
+  font-size: 13px;
+  color: #666;
+  text-decoration: none;
 }
 </style>
+
 </head>
 
 <body>
 
-<div class="header">
-  <img src="images/kaida.png">
-  <div class="desc">(グッズ)(アーカイブ)(歌枠)(お知らせ)</div>
-</div>
+<div class="card">
 
-<div class="tabs">
-  <div class="tab" data-tab="archive">アーカイブ</div>
-  <div class="tab" data-tab="goods">グッズ</div>
-  <div class="tab" data-tab="live">歌枠</div>
-  <div class="tab" data-tab="info">お知らせ</div>
-</div>
+  <div class="top">
+    <img src="images/kaida.png">
+    <div>
+      <div class="name">甲斐田 晴</div>
+      <div style="font-size:12px;color:#666;">歌・雑談・ゲーム配信</div>
+    </div>
+  </div>
 
-<div class="content" id="content">loading...</div>
+  <!-- タブ -->
+  <div class="tabs">
+    <div class="tab" onclick="showTab(event, 'goods')">グッズ</div>
+    <div class="tab" onclick="showTab(event, 'song')">歌枠</div>
+    <div class="tab" onclick="showTab(event, 'archive')">アーカイブ</div>
+    <div class="tab" onclick="showTab(event, 'news')">お知らせ</div>
+  </div>
+
+  <div class="content" id="content"></div>
+
+  <a href="index.html" class="back">← Back</a>
+
+</div>
 
 <script>
 
+/* =========================
+   API設定
+========================= */
+
 const CHANNEL_ID = "UCo2N7C-Z91waaR6lF3LL_jw";
-const API_KEY = "AIzaSyDNqDI1bIEQpWahutCP_w3QpLoQvdcde78";
+const API_KEY = "YOUR_API_KEY_HERE";
 
 /* =========================
-   タブ管理
+   UI用データ
+========================= */
+
+const data = {
+  goods: [
+    "誕生日グッズ2024",
+    "アクリルスタンド"
+  ],
+  song: [
+    "アニソン縛り歌枠",
+    "深夜歌枠"
+  ],
+  news: [
+    "新衣装発表",
+    "ライブ出演"
+  ]
+};
+
+/* =========================
+   タブ（保存＋復元）
 ========================= */
 
 window.addEventListener("load", () => {
-  const tab = localStorage.getItem("activeTab") || "archive";
-  loadTab(tab);
+  const saved = localStorage.getItem("activeTab") || "goods";
+  showTab(null, saved);
 });
 
-function loadTab(tab) {
-  document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
-  document.querySelector(`[data-tab="${tab}"]`)?.classList.add("active");
+function showTab(e, type) {
 
-  if (tab === "archive") loadArchive();
+  document.querySelectorAll(".tab").forEach(tab => {
+    tab.classList.remove("active");
+  });
+
+  const tabs = document.querySelectorAll(".tab");
+  const map = { goods: 0, song: 1, archive: 2, news: 3 };
+  tabs[map[type]]?.classList.add("active");
+
+  localStorage.setItem("activeTab", type);
+
+  const content = document.getElementById("content");
+
+  if (type !== "archive") {
+    content.innerHTML =
+      "<ul>" +
+      data[type].map(item => `<li>${item}</li>`).join("") +
+      "</ul>";
+  } else {
+    loadArchive();
+  }
 }
 
 /* =========================
-   秒変換（重複完全削除）
+   YouTubeユーティリティ
 ========================= */
 
 function parseDuration(d) {
@@ -112,53 +183,35 @@ function parseDuration(d) {
   return (Number(m[1] || 0) * 60) + Number(m[2] || 0);
 }
 
-/* =========================
-   判定ロジック（最終安定版）
-========================= */
-
-/* ライブ */
-function isLive(v) {
-  const title = (v.snippet?.title || "").toLowerCase();
-  const sec = parseDuration(v.contentDetails?.duration);
-
-  return (
-    title.includes("配信") ||
-    title.includes("ライブ") ||
-    title.includes("live") ||
-    title.includes("歌枠") ||
-    title.includes("雑談") ||
-    sec >= 3600
-  );
-}
-
-/* ショート */
 function isShort(v) {
-  const title = (v.snippet?.title || "").toLowerCase();
-  const sec = parseDuration(v.contentDetails?.duration);
+  return parseDuration(v.contentDetails?.duration) <= 60;
+}
 
-  const isLiveLike =
+function isLive(v) {
+  const sec = parseDuration(v.contentDetails?.duration);
+  const title = (v.snippet?.title || "").toLowerCase();
+
+  return (
+    sec >= 3600 ||
     title.includes("配信") ||
     title.includes("ライブ") ||
     title.includes("live") ||
     title.includes("歌枠") ||
-    title.includes("雑談");
-
-  return sec > 0 && sec <= 60 && !isLiveLike;
-}
-
-/* オリ曲 / 試聴 */
-function isOriginal(v) {
-  const title = (v.snippet?.title || "").toLowerCase();
-  return (
-    title.includes("オリジナル") ||
-    title.includes("mv") ||
-    title.includes("試聴")
+    title.includes("雑談")
   );
 }
 
-/* 切り抜き */
 function isClip(v) {
   return (v.snippet?.title || "").toLowerCase().includes("切り抜き");
+}
+
+function isSong(v) {
+  return (v.snippet?.title || "").toLowerCase().includes("歌ってみた");
+}
+
+function isOriginal(v) {
+  const t = (v.snippet?.title || "").toLowerCase();
+  return t.includes("オリジナル") || t.includes("mv") || t.includes("試聴");
 }
 
 /* =========================
@@ -205,47 +258,34 @@ async function loadArchive() {
 
     videos.forEach(v => {
 
-      const title = (v.snippet?.title || "").toLowerCase();
-
       if (isShort(v)) return groups.short.push(v);
       if (isLive(v)) return groups.live.push(v);
-
+      if (isSong(v)) return groups.song.push(v);
       if (isClip(v)) return groups.clip.push(v);
-
-      if (title.includes("歌ってみた")) return groups.song.push(v);
-
       if (isOriginal(v)) return groups.original.push(v);
 
-      groups.original.push(v);
     });
 
-    const html = (v) => `
-      <div>
-        <img src="https://i.ytimg.com/vi/${v.id}/hqdefault.jpg"
-             style="width:100%;border-radius:8px;">
-      </div>
-    `;
+    const render = (arr) =>
+      arr.map(v => `<li>${v.snippet?.title || ""}</li>`).join("");
 
     el.innerHTML = `
-      <h3>ライブ</h3>
-      <div class="video-grid">${groups.live.map(html).join("")}</div>
+      <ul>
+        <b>ライブ</b><br>${render(groups.live)}<br><br>
 
-      <h3>歌ってみた</h3>
-      <div class="video-grid">${groups.song.map(html).join("")}</div>
+        <b>歌ってみた</b><br>${render(groups.song)}<br><br>
 
-      <h3>オリ曲 / 試聴</h3>
-      <div class="video-grid">${groups.original.map(html).join("")}</div>
+        <b>オリ曲 / 試聴</b><br>${render(groups.original)}<br><br>
 
-      <h3>切り抜き</h3>
-      <div class="video-grid">${groups.clip.map(html).join("")}</div>
+        <b>切り抜き</b><br>${render(groups.clip)}<br><br>
 
-      <h3>ショート</h3>
-      <div class="video-grid">${groups.short.map(html).join("")}</div>
+        <b>ショート</b><br>${render(groups.short)}
+      </ul>
     `;
 
   } catch (e) {
     console.error(e);
-    el.innerHTML = "読み込み失敗（API or データエラー）";
+    el.innerHTML = "読み込み失敗";
   }
 }
 
