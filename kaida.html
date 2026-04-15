@@ -106,7 +106,7 @@ const CHANNEL_ID = "UCo2N7C-Z91waaR6lF3LL_jw";
 const API_KEY = "AIzaSyDNqDI1bIEQpWahutCP_w3QpLoQvdcde78";
 
 /* =========================
-   タイトル正規化
+   正規化
 ========================= */
 function normalizeTitle(title){
   return (title || "")
@@ -114,19 +114,6 @@ function normalizeTitle(title){
     .toLowerCase()
     .replace(/[【】\[\]（）()]/g, "")
     .replace(/\s/g, "");
-}
-
-/* =========================
-   動画正規化
-========================= */
-function normalizeVideo(v){
-  const title = v.snippet?.title || "";
-  return {
-    id: v.id,
-    title,
-    t: normalizeTitle(title),
-    duration: parseDuration(v.contentDetails?.duration)
-  };
 }
 
 /* =========================
@@ -140,35 +127,43 @@ function parseDuration(d){
 }
 
 /* =========================
-   分類ルール
+   重要：完全統一データ
+========================= */
+function normalizeVideo(v){
+  const rawTitle = v.snippet?.title || "";
+
+  return {
+    id: v.id,
+    title: rawTitle,
+    t: normalizeTitle(rawTitle),
+    duration: parseDuration(v.contentDetails?.duration)
+  };
+}
+
+/* =========================
+   分類
 ========================= */
 
-// 切り抜き（完全安定版）
+// 切り抜き（最重要）
 function isClip(v){
-  const t = v.t.replace(/\//g, ""); // ←重要ポイント
-
   return (
-    t.includes("切り抜き") ||
-    t.includes("clip") ||
-    t.includes("ハイライト")
+    v.t.includes("切り抜き") ||
+    v.t.includes("clip") ||
+    v.t.includes("ハイライト")
   );
 }
 
-// 歌ってみた
+// 歌
 function isSong(v){
   return v.t.includes("歌ってみた") || v.t.includes("cover");
 }
 
-// オリ曲 / MV / 試聴
+// オリ曲
 function isOriginal(v){
-  return (
-    v.t.includes("オリジナル") ||
-    v.t.includes("mv") ||
-    v.t.includes("試聴")
-  );
+  return v.t.includes("オリジナル") || v.t.includes("mv") || v.t.includes("試聴");
 }
 
-// 配信アーカイブ
+// 配信アーカイブ（ライブ）
 function isLive(v){
   const t = v.t;
   const sec = v.duration;
@@ -226,7 +221,7 @@ function showTab(e,type){
 }
 
 /* =========================
-   YouTube取得
+   本体
 ========================= */
 async function loadArchive(){
 
@@ -261,6 +256,7 @@ async function loadArchive(){
 
   videos.forEach(v => {
 
+    // 1動画1分類（完全固定）
     if(isClip(v)) return g.clip.push(v);
     if(isSong(v)) return g.song.push(v);
     if(isOriginal(v)) return g.original.push(v);
