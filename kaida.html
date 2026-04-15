@@ -131,6 +131,15 @@ function parseDuration(d){
   return (Number(m[1]||0)*60 + Number(m[2]||0));
 }
 
+function normalizeVideo(v){
+  return {
+    id: v.id,
+    title: v.snippet?.title || "",
+    duration: parseDuration(v.contentDetails?.duration),
+    liveStatus: v.snippet?.liveBroadcastContent || ""
+  };
+}
+
 /* =========================
    分類（安定版）
 ========================= */
