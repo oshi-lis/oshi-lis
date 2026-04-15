@@ -82,17 +82,6 @@ img {
   color: #666;
   text-decoration: none;
 }
-
-/* ★デバッグ表示（スマホ用） */
-#debug {
-  font-size: 12px;
-  background: #111;
-  color: #0f0;
-  padding: 10px;
-  white-space: pre-wrap;
-  margin-bottom: 10px;
-  border-radius: 8px;
-}
 </style>
 </head>
 
@@ -115,7 +104,6 @@ img {
     <div class="tab" onclick="showTab(event, 'news')">お知らせ</div>
   </div>
 
-  <div id="debug"></div>
   <div class="content" id="content"></div>
 
   <a href="index.html" class="back">← Back</a>
@@ -134,7 +122,7 @@ function saveTab(t){ localStorage.setItem("tab", t); }
 function getTab(){ return localStorage.getItem("tab") || "goods"; }
 
 /* =========================
-   時間
+   時間変換
 ========================= */
 function parseDuration(d){
   if(!d) return Infinity;
@@ -144,50 +132,81 @@ function parseDuration(d){
 }
 
 /* =========================
-   正規化
+   タイトル正規化（超重要）
+========================= */
+function normalizeTitle(title){
+  return (title || "")
+    .normalize("NFKC")
+    .toLowerCase()
+    .replace(/[【】\[\]（）()]/g, "")
+    .replace(/\s/g, "");
+}
+
+/* =========================
+   正規化データ
 ========================= */
 function normalizeVideo(v){
+  const title = v.snippet?.title || "";
   return {
     id: v.id,
-    title: (v.snippet?.title || "")
-      .normalize("NFKC")
-      .toLowerCase()
-      .replace(/\s/g, ""),
-    duration: parseDuration(v.contentDetails?.duration),
-    liveStatus: v.snippet?.liveBroadcastContent || "none"
+    title,
+    t: normalizeTitle(title),
+    duration: parseDuration(v.contentDetails?.duration)
   };
 }
 
 /* =========================
-   分類（完全分離）
+   分類ルール
 ========================= */
+
+// 切り抜き
 function isClip(v){
-  return v.title.includes("切り抜き") || v.title.includes("clip");
+  return v.t.includes("切り抜き") || v.t.includes("clip");
 }
 
-function isOriginal(v){
-  return v.title.includes("オリジナル") || v.title.includes("mv") || v.title.includes("試聴");
-}
-
+// 歌ってみた
 function isSong(v){
-  return v.title.includes("歌ってみた") || v.title.includes("cover");
+  return v.t.includes("歌ってみた") || v.t.includes("cover");
 }
 
+// オリ曲 / MV / 試聴
+function isOriginal(v){
+  return v.t.includes("オリジナル") || v.t.includes("mv") || v.t.includes("試聴");
+}
+
+// ライブ（アーカイブ配信扱い）
 function isLive(v){
-  return v.liveStatus === "live" || v.liveStatus === "upcoming";
+  const t = v.t;
+  const sec = v.duration;
+
+  return (
+    t.includes("配信") ||
+    t.includes("雑談") ||
+    t.includes("弾き語り") ||
+    t.includes("マイクラ") ||
+    t.includes("ark") ||
+    t.includes("ぽこあポケモン") ||
+    t.includes("minecraft") ||
+    t.includes("pokemon") ||
+    sec >= 1800
+  );
 }
 
+// ショート（厳密）
 function isShort(v){
-  return v.duration <= 60;
+  return v.duration > 0 && v.duration <= 60;
 }
 
 /* =========================
-   UI
+   初期化
 ========================= */
 window.addEventListener("load", ()=>{
   showTab(null, getTab());
 });
 
+/* =========================
+   タブ
+========================= */
 function showTab(e,type){
 
   document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
@@ -208,7 +227,6 @@ function showTab(e,type){
     document.getElementById("content").innerHTML =
       "<ul>" + (data[type]||[]).map(v=>`<li>${v}</li>`).join("") + "</ul>";
 
-    document.getElementById("debug").textContent = "";
     return;
   }
 
@@ -216,7 +234,7 @@ function showTab(e,type){
 }
 
 /* =========================
-   アーカイブ
+   YouTube取得
 ========================= */
 async function loadArchive(){
 
@@ -227,55 +245,47 @@ async function loadArchive(){
     `https://www.googleapis.com/youtube/v3/channels?part=contentDetails&id=${CHANNEL_ID}&key=${API_KEY}`
   ).then(r=>r.json());
 
-  const uploads=ch.items[0].contentDetails.relatedPlaylists.uploads;
+  const uploads = ch.items[0].contentDetails.relatedPlaylists.uploads;
 
   const pl=await fetch(
     `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet,contentDetails&playlistId=${uploads}&maxResults=50&key=${API_KEY}`
   ).then(r=>r.json());
 
-  const ids=pl.items.map(v=>v.snippet.resourceId.videoId).join(",");
+  const ids = pl.items.map(v=>v.snippet.resourceId.videoId).join(",");
 
   const vd=await fetch(
     `https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails&id=${ids}&key=${API_KEY}`
   ).then(r=>r.json());
 
-  const videos=vd.items||[];
+  const videos = (vd.items || []).map(normalizeVideo);
 
-  const g={
-    live:[],
-    song:[],
-    original:[],
-    clip:[],
-    short:[]
+  const g = {
+    live: [],
+    song: [],
+    original: [],
+    clip: [],
+    short: []
   };
 
-  videos.forEach(v=>{
-    const nv = normalizeVideo(v);
+  videos.forEach(v => {
 
-    if(isClip(nv)) return g.clip.push(v);
-    if(isOriginal(nv)) return g.original.push(v);
-    if(isSong(nv)) return g.song.push(v);
-    if(isLive(nv)) return g.live.push(v);
-    if(isShort(nv)) return g.short.push(v);
+    if(isClip(v)) return g.clip.push(v);
+    if(isSong(v)) return g.song.push(v);
+    if(isOriginal(v)) return g.original.push(v);
+    if(isLive(v)) return g.live.push(v);
+    if(isShort(v)) return g.short.push(v);
+
   });
 
-  // ★スマホ表示デバッグ（ここが重要）
-  document.getElementById("debug").textContent =
-"LIVE:\n" + g.live.map(v=>v.snippet.title).join("\n") + "\n\n" +
-"CLIP:\n" + g.clip.map(v=>v.snippet.title).join("\n") + "\n\n" +
-"SONG:\n" + g.song.map(v=>v.snippet.title).join("\n") + "\n\n" +
-"ORIGINAL:\n" + g.original.map(v=>v.snippet.title).join("\n") + "\n\n" +
-"SHORT:\n" + g.short.map(v=>v.snippet.title).join("\n");
-
-  const render=a=>a.map(v=>`
+  const render = a => a.map(v => `
     <div class="thumb">
       <img src="https://i.ytimg.com/vi/${v.id}/hqdefault.jpg">
-      <div>${v.snippet.title}</div>
+      <div>${v.title}</div>
     </div>
   `).join("");
 
-  el.innerHTML=`
-    <h3>ライブ</h3>
+  el.innerHTML = `
+    <h3>ライブ（配信アーカイブ）</h3>
     <div class="video-grid">${render(g.live)}</div>
 
     <h3>歌ってみた</h3>
