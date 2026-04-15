@@ -79,6 +79,14 @@ img {
   font-size: 12px;
   margin-top: 4px;
 }
+
+.back {
+  display: inline-block;
+  margin-top: 20px;
+  font-size: 13px;
+  color: #666;
+  text-decoration: none;
+}
 </style>
 </head>
 
@@ -103,6 +111,8 @@ img {
 
   <div class="content" id="content"></div>
 
+  <a href="index.html" class="back">← Back</a>
+
 </div>
 
 <script>
@@ -111,7 +121,7 @@ const CHANNEL_ID = "UCo2N7C-Z91waaR6lF3LL_jw";
 const API_KEY = "AIzaSyDNqDI1bIEQpWahutCP_w3QpLoQvdcde78";
 
 /* =========================
-   UI
+   タブ
 ========================= */
 function showTab(e,type){
 
@@ -138,68 +148,112 @@ function showTab(e,type){
 }
 
 /* =========================
-   YouTube検索取得
-========================= */
-async function fetchVideos(query){
-
-  const res = await fetch(
-    `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=20&q=${encodeURIComponent(query)}&channelId=${CHANNEL_ID}&key=${API_KEY}`
-  );
-
-  const json = await res.json();
-  return json.items || [];
-}
-
-/* =========================
-   描画
-========================= */
-function render(items){
-  return items.map(v=>`
-    <div class="thumb">
-      <img src="https://i.ytimg.com/vi/${v.id.videoId}/hqdefault.jpg">
-      <div>${v.snippet.title}</div>
-    </div>
-  `).join("");
-}
-
-/* =========================
-   メイン
+   API取得（固定方式）
 ========================= */
 async function loadArchive(){
 
   const el = document.getElementById("content");
   el.innerHTML = "loading...";
 
-  const [
-    live,
-    song,
-    original,
-    clip,
-    short
-  ] = await Promise.all([
-    fetchVideos("配信 雑談 マイクラ ARK ポケモン"),
-    fetchVideos("歌ってみた cover"),
-    fetchVideos("オリジナル MV 試聴"),
-    fetchVideos("切り抜き clip"),
-    fetchVideos("short #shorts")
-  ]);
+  const ch = await fetch(
+    `https://www.googleapis.com/youtube/v3/channels?part=contentDetails&id=${CHANNEL_ID}&key=${API_KEY}`
+  ).then(r=>r.json());
+
+  const uploads = ch.items[0].contentDetails.relatedPlaylists.uploads;
+
+  const pl = await fetch(
+    `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet,contentDetails&playlistId=${uploads}&maxResults=50&key=${API_KEY}`
+  ).then(r=>r.json());
+
+  const ids = pl.items
+    .map(v => v.snippet.resourceId.videoId)
+    .join(",");
+
+  const vd = await fetch(
+    `https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails&id=${ids}&key=${API_KEY}`
+  ).then(r=>r.json());
+
+  const videos = vd.items || [];
+
+  /* =========================
+     分類（完全固定ルール）
+  ========================= */
+  const g = {
+    live: [],
+    song: [],
+    original: [],
+    clip: [],
+    short: []
+  };
+
+  videos.forEach(v => {
+
+    const title = v.snippet?.title || "";
+    const sec = parseDuration(v.contentDetails?.duration);
+
+    // ① 切り抜き最優先
+    if (title.includes("切り抜き") || title.includes("clip")) {
+      return g.clip.push(v);
+    }
+
+    // ② 歌ってみた
+    if (title.includes("歌ってみた") || title.includes("cover")) {
+      return g.song.push(v);
+    }
+
+    // ③ オリ曲
+    if (title.includes("オリジナル") || title.includes("MV") || title.includes("試聴")) {
+      return g.original.push(v);
+    }
+
+    // ④ 配信（アーカイブ含む）
+    if (title.includes("配信") || title.includes("雑談") || sec >= 1800) {
+      return g.live.push(v);
+    }
+
+    // ⑤ ショート（最後固定）
+    if (sec > 0 && sec <= 60) {
+      return g.short.push(v);
+    }
+
+  });
+
+  /* =========================
+     描画
+  ========================= */
+  const render = arr => arr.map(v => `
+    <div class="thumb">
+      <img src="https://i.ytimg.com/vi/${v.id}/hqdefault.jpg">
+      <div>${v.snippet.title}</div>
+    </div>
+  `).join("");
 
   el.innerHTML = `
     <h3>配信アーカイブ</h3>
-    <div class="video-grid">${render(live)}</div>
+    <div class="video-grid">${render(g.live)}</div>
 
     <h3>歌ってみた</h3>
-    <div class="video-grid">${render(song)}</div>
+    <div class="video-grid">${render(g.song)}</div>
 
     <h3>オリ曲 / 試聴</h3>
-    <div class="video-grid">${render(original)}</div>
+    <div class="video-grid">${render(g.original)}</div>
 
     <h3>切り抜き</h3>
-    <div class="video-grid">${render(clip)}</div>
+    <div class="video-grid">${render(g.clip)}</div>
 
     <h3>ショート</h3>
-    <div class="video-grid">${render(short)}</div>
+    <div class="video-grid">${render(g.short)}</div>
   `;
+}
+
+/* =========================
+   duration
+========================= */
+function parseDuration(d){
+  if(!d) return 0;
+  const m = d.match(/PT(?:(\d+)M)?(?:(\d+)S)?/);
+  if(!m) return 0;
+  return (Number(m[1]||0)*60 + Number(m[2]||0));
 }
 
 window.addEventListener("load", ()=>{
