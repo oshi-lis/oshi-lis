@@ -190,40 +190,32 @@ async function loadArchive() {
 
   try {
 
-    const res = await fetch(
-      "https://www.youtube.com/feeds/videos.xml?channel_id=" + CHANNEL_ID
-    );
+    const API_KEY = "AIzaSyDNqDI1bIEQpWahutCP_w3QpLoQvdcde78";
+    const CHANNEL_ID = "UCo2N7C-Z91waaR6lF3LL_jw";
 
-    const text = await res.text();
+    const url =
+      `https://www.googleapis.com/youtube/v3/search?` +
+      `key=${API_KEY}` +
+      `channelId=${CHANNEL_ID}` +
+      `part=snippet&order=date&maxResults=6&type=video`;
 
-    // 🔍 ここでまず中身チェック
-    if (!text.includes("<entry")) {
-      throw new Error("RSSじゃないデータが返ってきてる");
-    }
+    const res = await fetch(url);
+    const data = await res.json();
 
-    const xml = new DOMParser().parseFromString(text, "text/xml");
+    const videos = data.items.map(item => {
 
-    const entries = [...xml.querySelectorAll("entry")];
-
-    if (entries.length === 0) {
-      throw new Error("entryが0件（解析失敗）");
-    }
-
-    const videos = entries.slice(0, 6).map(e => {
-
-      const title = e.querySelector("title")?.textContent;
-      const link = e.querySelector("link")?.getAttribute("href");
-      const id = e.querySelector("yt\\:videoId")?.textContent;
-
-      if (!id) return "";
+      const videoId = item.id.videoId;
+      const title = item.snippet.title;
 
       return `
         <div>
           <div class="thumb">
-            <img src="https://i.ytimg.com/vi/${id}/hqdefault.jpg">
+            <img src="https://i.ytimg.com/vi/${videoId}/hqdefault.jpg">
           </div>
           <div class="title">
-            <a href="${link}" target="_blank">${title}</a>
+            <a href="https://www.youtube.com/watch?v=${videoId}" target="_blank">
+              ${title}
+            </a>
           </div>
         </div>
       `;
@@ -234,18 +226,11 @@ async function loadArchive() {
 
   } catch (e) {
 
-    console.error(e);
-
     document.getElementById("content").innerHTML =
-      `
-      <div style="font-size:12px;color:red;">
-        RSS読み込み失敗<br>
-        原因: ${e.message}
-      </div>
-      `;
+      "読み込み失敗：" + e.message;
+
   }
 }
-
 </script>
 
 </body>
