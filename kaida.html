@@ -106,94 +106,6 @@ const CHANNEL_ID = "UCo2N7C-Z91waaR6lF3LL_jw";
 const API_KEY = "AIzaSyDNqDI1bIEQpWahutCP_w3QpLoQvdcde78";
 
 /* =========================
-   正規化
-========================= */
-function normalizeTitle(title){
-  return (title || "")
-    .normalize("NFKC")
-    .toLowerCase()
-    .replace(/[【】\[\]（）()]/g, "")
-    .replace(/\s/g, "");
-}
-
-/* =========================
-   時間
-========================= */
-function parseDuration(d){
-  if(!d) return Infinity;
-  const m = d.match(/PT(?:(\d+)M)?(?:(\d+)S)?/);
-  if(!m) return Infinity;
-  return (Number(m[1]||0)*60 + Number(m[2]||0));
-}
-
-/* =========================
-   重要：完全統一データ
-========================= */
-function normalizeVideo(v){
-  const rawTitle = v.snippet?.title || "";
-
-  return {
-    id: v.id,
-    title: rawTitle,
-    t: normalizeTitle(rawTitle),
-    duration: parseDuration(v.contentDetails?.duration)
-  };
-}
-
-/* =========================
-   分類
-========================= */
-
-// 切り抜き（最重要）
-function isClip(v){
-  return (
-    v.t.includes("切り抜き") ||
-    v.t.includes("clip") ||
-    v.t.includes("ハイライト")
-  );
-}
-
-// 歌
-function isSong(v){
-  return v.t.includes("歌ってみた") || v.t.includes("cover");
-}
-
-// オリ曲
-function isOriginal(v){
-  return v.t.includes("オリジナル") || v.t.includes("mv") || v.t.includes("試聴");
-}
-
-// 配信アーカイブ（ライブ）
-function isLive(v){
-  const t = v.t;
-  const sec = v.duration;
-
-  return (
-    t.includes("配信") ||
-    t.includes("雑談") ||
-    t.includes("弾き語り") ||
-    t.includes("マイクラ") ||
-    t.includes("ark") ||
-    t.includes("ぽこあポケモン") ||
-    t.includes("minecraft") ||
-    t.includes("pokemon") ||
-    sec >= 1800
-  );
-}
-
-// ショート
-function isShort(v){
-  return v.duration > 0 && v.duration <= 60;
-}
-
-/* =========================
-   初期化
-========================= */
-window.addEventListener("load", ()=>{
-  showTab(null, "archive");
-});
-
-/* =========================
    タブ
 ========================= */
 function showTab(e,type){
@@ -221,7 +133,51 @@ function showTab(e,type){
 }
 
 /* =========================
-   本体
+   時間
+========================= */
+function parseDuration(d){
+  if(!d) return Infinity;
+  const m = d.match(/PT(?:(\d+)M)?(?:(\d+)S)?/);
+  if(!m) return Infinity;
+  return (Number(m[1]||0)*60 + Number(m[2]||0));
+}
+
+/* =========================
+   正規化なしで統一（重要）
+========================= */
+function normalize(v){
+  return {
+    id: v.id,
+    title: v.snippet?.title || "",
+    duration: parseDuration(v.contentDetails?.duration)
+  };
+}
+
+/* =========================
+   分類
+========================= */
+function isClip(v){
+  return /切り抜き|clip/i.test(v.title);
+}
+
+function isSong(v){
+  return /歌ってみた|cover/i.test(v.title);
+}
+
+function isOriginal(v){
+  return /オリジナル|mv|試聴/i.test(v.title);
+}
+
+function isLive(v){
+  return /配信|雑談|マイクラ|ark|ぽこあポケモン/i.test(v.title) || v.duration >= 1800;
+}
+
+function isShort(v){
+  return v.duration > 0 && v.duration <= 60;
+}
+
+/* =========================
+   アーカイブ
 ========================= */
 async function loadArchive(){
 
@@ -238,13 +194,16 @@ async function loadArchive(){
     `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet,contentDetails&playlistId=${uploads}&maxResults=50&key=${API_KEY}`
   ).then(r=>r.json());
 
-  const ids = pl.items.map(v=>v.snippet.resourceId.videoId).join(",");
+  const ids = pl.items
+    .map(v => v.snippet?.resourceId?.videoId)
+    .filter(Boolean)
+    .join(",");
 
   const vd=await fetch(
     `https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails&id=${ids}&key=${API_KEY}`
   ).then(r=>r.json());
 
-  const videos = (vd.items || []).map(normalizeVideo);
+  const videos = (vd.items || []).map(normalize);
 
   const g = {
     live: [],
@@ -256,7 +215,6 @@ async function loadArchive(){
 
   videos.forEach(v => {
 
-    // 1動画1分類（完全固定）
     if(isClip(v)) return g.clip.push(v);
     if(isSong(v)) return g.song.push(v);
     if(isOriginal(v)) return g.original.push(v);
