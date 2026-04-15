@@ -62,21 +62,8 @@ body {
   margin-top: 15px;
 }
 
-/* ===== アーカイブUI ===== */
-.header-row{
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  margin-bottom:10px;
-}
-
-.refresh-btn{
-  font-size:12px;
-  cursor:pointer;
-  background:#eee;
-  border:none;
-  padding:4px 8px;
-  border-radius:6px;
+.section {
+  margin-bottom: 25px;
 }
 
 .video-grid {
@@ -91,29 +78,29 @@ body {
 }
 
 .thumb a {
-  color: #222;
   text-decoration: none;
+  color: #222;
   font-size: 12px;
 }
 
 .pagination {
-  margin-top: 12px;
-  display:flex;
-  gap:6px;
-  justify-content:center;
-  font-size:12px;
+  margin-top: 8px;
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  font-size: 12px;
 }
 
-.page-btn{
-  padding:4px 8px;
-  background:#eee;
-  border-radius:6px;
-  cursor:pointer;
+.page-btn {
+  padding: 4px 8px;
+  background: #eee;
+  border-radius: 6px;
+  cursor: pointer;
 }
 
-.page-btn.active{
-  background:#222;
-  color:#fff;
+.page-btn.active {
+  background: #222;
+  color: #fff;
 }
 </style>
 </head>
@@ -146,17 +133,31 @@ body {
 const CHANNEL_ID = "UCo2N7C-Z91waaR6lF3LL_jw";
 const API_KEY = "AIzaSyDNqDI1bIEQpWahutCP_w3QpLoQvdcde78";
 
-const CACHE_KEY = "kaida_cache_v2";
+const perPage = 6;
 
+/* ===== 固定タブ ===== */
 const data = {
   goods: ["誕生日グッズ2024","アクリルスタンド"],
   song: ["アニソン縛り歌枠","深夜歌枠"],
   news: ["新衣装発表","ライブ出演"]
 };
 
-let videos = [];
-let currentPage = 1;
-const perPage = 6;
+/* ===== アーカイブ状態 ===== */
+let videos = {
+  live:[],
+  song:[],
+  original:[],
+  clip:[],
+  short:[]
+};
+
+let pageState = {
+  live:1,
+  song:1,
+  original:1,
+  clip:1,
+  short:1
+};
 
 /* ===== タブ ===== */
 function showTab(e,type){
@@ -166,7 +167,7 @@ function showTab(e,type){
 
   const el = document.getElementById("content");
 
-  if(type==="archive"){
+  if(type === "archive"){
     loadArchive();
     return;
   }
@@ -233,80 +234,105 @@ async function getDetails(ids){
   return all;
 }
 
-/* ===== アーカイブロード ===== */
+/* ===== 分類 ===== */
+function classify(videosRaw){
+
+  const g = {
+    live:[],
+    song:[],
+    original:[],
+    clip:[],
+    short:[]
+  };
+
+  videosRaw.forEach(v=>{
+    const title = v.snippet.title || "";
+    const sec = parseDuration(v.contentDetails.duration);
+
+    if(title.includes("切り抜き")) return g.clip.push(v);
+    if(title.includes("オリジナル") || title.includes("試聴")) return g.original.push(v);
+    if(title.includes("歌ってみた")) return g.song.push(v);
+    if(title.includes("配信") || title.includes("雑談") || sec >= 1800) return g.live.push(v);
+    if(sec > 0 && sec <= 60) return g.short.push(v);
+  });
+
+  return g;
+}
+
+/* ===== アーカイブ読み込み ===== */
 async function loadArchive(){
 
   const el = document.getElementById("content");
-
   el.innerHTML = "loading...";
-
-  const cache = localStorage.getItem(CACHE_KEY);
-
-  if(cache){
-    videos = JSON.parse(cache);
-  }
 
   const list = await getAllVideos(100);
   const ids = list.map(v=>v.snippet.resourceId.videoId);
-  videos = await getDetails(ids);
+  const details = await getDetails(ids);
 
-  localStorage.setItem(CACHE_KEY, JSON.stringify(videos));
+  videos = classify(details);
 
-  currentPage = 1;
   renderArchive();
 }
 
-/* ===== ページ描画 ===== */
-function renderArchive(){
+/* ===== 描画 ===== */
+function renderSection(key,title){
 
-  const el = document.getElementById("content");
+  const list = videos[key];
+  const page = pageState[key];
 
-  const start = (currentPage-1)*perPage;
-  const pageItems = videos.slice(start,start+perPage);
+  const start = (page-1)*perPage;
+  const items = list.slice(start,start+perPage);
 
-  const render = arr => arr.map(v=>`
-    <div class="thumb">
-      <a href="https://www.youtube.com/watch?v=${v.id}" target="_blank">
-        <img src="https://i.ytimg.com/vi/${v.id}/hqdefault.jpg">
-        <div>${v.snippet.title}</div>
-      </a>
-    </div>
-  `).join("");
+  const total = Math.ceil(list.length/perPage);
 
-  const totalPages = Math.ceil(videos.length/perPage);
+  return `
+    <div class="section">
+      <h3>${title}</h3>
 
-  el.innerHTML = `
-    <div class="header-row">
-      <h3>配信アーカイブ</h3>
-      <button class="refresh-btn" onclick="refreshArchive()">🔄更新</button>
-    </div>
+      <div class="video-grid">
+        ${items.map(v=>`
+          <div class="thumb">
+            <a href="https://www.youtube.com/watch?v=${v.id}" target="_blank">
+              <img src="https://i.ytimg.com/vi/${v.id}/hqdefault.jpg">
+              <div>${v.snippet.title}</div>
+            </a>
+          </div>
+        `).join("")}
+      </div>
 
-    <div class="video-grid">${render(pageItems)}</div>
-
-    <div class="pagination">
-      ${Array.from({length: totalPages},(_,i)=>`
-        <div class="page-btn ${i+1===currentPage?'active':''}"
-             onclick="changePage(${i+1})">${i+1}</div>
-      `).join("")}
+      <div class="pagination">
+        ${Array.from({length:total},(_,i)=>`
+          <div class="page-btn ${i+1===page?'active':''}"
+               onclick="changePage('${key}',${i+1})">${i+1}</div>
+        `).join("")}
+      </div>
     </div>
   `;
 }
 
-/* ===== ページ操作 ===== */
-function changePage(p){
-  currentPage = p;
+/* ===== 全体描画 ===== */
+function renderArchive(){
+
+  const el = document.getElementById("content");
+
+  el.innerHTML = `
+    ${renderSection("live","配信アーカイブ")}
+    ${renderSection("song","歌ってみた")}
+    ${renderSection("original","オリ曲 / 試聴")}
+    ${renderSection("clip","切り抜き")}
+    ${renderSection("short","ショート")}
+  `;
+}
+
+/* ===== ページ変更 ===== */
+function changePage(key,page){
+  pageState[key] = page;
   renderArchive();
 }
 
-/* ===== 更新 ===== */
-function refreshArchive(){
-  localStorage.removeItem(CACHE_KEY);
-  loadArchive();
-}
-
 /* ===== 初期 ===== */
-const saved = localStorage.getItem("activeTab") || "goods";
-const target = document.querySelector(`.tab[onclick*="${saved}"]`);
+const saved = "goods";
+const target = document.querySelector(".tab");
 showTab({target}, saved);
 
 </script>
