@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>甲斐田 晴</title>
+<title>推しアーカイブ</title>
 
 <style>
 body {
@@ -13,30 +13,12 @@ body {
 }
 
 .card {
-  max-width: 600px;
+  max-width: 700px;
   margin: 0 auto;
   background: white;
   padding: 20px;
   border-radius: 16px;
   box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-}
-
-.top {
-  display: flex;
-  gap: 16px;
-  align-items: center;
-}
-
-img {
-  width: 100px;
-  height: 100px;
-  border-radius: 16px;
-  object-fit: cover;
-}
-
-.name {
-  font-size: 20px;
-  font-weight: bold;
 }
 
 .tabs {
@@ -58,47 +40,23 @@ img {
   color: white;
 }
 
-.content {
-  margin-top: 15px;
-}
-
 .video-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 8px;
-}
-
-.thumb {
-  width: 100%;
-  aspect-ratio: 16 / 9;
-  overflow: hidden;
-  border-radius: 8px;
+  margin-top: 10px;
 }
 
 .thumb img {
   width: 100%;
-  height: 100%;
+  aspect-ratio: 16/9;
   object-fit: cover;
+  border-radius: 8px;
 }
 
 .title {
-  margin-top: 4px;
   font-size: 11px;
-  line-height: 1.3;
-}
-
-.title a {
-  text-decoration: none;
-  color: #222;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-h3 {
-  margin: 20px 0 10px;
-  font-size: 14px;
+  margin-top: 4px;
 }
 </style>
 </head>
@@ -107,22 +65,13 @@ h3 {
 
 <div class="card">
 
-  <div class="top">
-    <img src="images/kaida.png">
-    <div>
-      <div class="name">甲斐田 晴</div>
-      <div style="font-size:12px;color:#666;">歌・雑談・ゲーム配信</div>
-    </div>
-  </div>
+  <h2>推しアーカイブ</h2>
 
   <div class="tabs">
-    <div class="tab" onclick="setTab('goods')">グッズ</div>
-    <div class="tab" onclick="setTab('song')">歌枠</div>
-    <div class="tab" onclick="setTab('archive')">アーカイブ</div>
-    <div class="tab" onclick="setTab('news')">お知らせ</div>
+    <div class="tab" onclick="load()">更新</div>
   </div>
 
-  <div class="content" id="content"></div>
+  <div id="content">読み込み待機中</div>
 
 </div>
 
@@ -132,56 +81,7 @@ const CHANNEL_ID = "UCo2N7C-Z91waaR6lF3LL_jw";
 const API_KEY = "AIzaSyDNqDI1bIEQpWahutCP_w3QpLoQvdcde78";
 
 /* =========================
-   タブ固定
-========================= */
-function saveTab(tab) {
-  localStorage.setItem("lastTab", tab);
-}
-
-function loadTab() {
-  return localStorage.getItem("lastTab") || "goods";
-}
-
-let currentTab = loadTab();
-
-function setTab(tab) {
-  currentTab = tab;
-  saveTab(tab);
-  render();
-}
-
-document.addEventListener("DOMContentLoaded", render);
-
-/* =========================
-   UIデータ
-========================= */
-const data = {
-  goods: ["誕生日グッズ2024", "アクリルスタンド"],
-  song: ["歌枠まとめ", "アニソン歌枠"],
-  news: ["新衣装発表", "ライブ出演"]
-};
-
-function render() {
-
-  const map = ["goods", "song", "archive", "news"];
-
-  document.querySelectorAll(".tab").forEach((t, i) => {
-    t.classList.toggle("active", map[i] === currentTab);
-  });
-
-  if (currentTab === "archive") {
-    loadArchive();
-    return;
-  }
-
-  document.getElementById("content").innerHTML =
-    "<ul>" +
-    (data[currentTab] || []).map(v => `<li>${v}</li>`).join("") +
-    "</ul>";
-}
-
-/* =========================
-   Shorts判定（安全版）
+   Shorts判定（完全固定）
 ========================= */
 function isShort(v) {
 
@@ -191,119 +91,116 @@ function isShort(v) {
   const m = d.match(/PT(?:(\d+)M)?(?:(\d+)S)?/);
   if (!m) return false;
 
-  const total = (Number(m[1] || 0) * 60) + Number(m[2] || 0);
+  const sec = (Number(m[1] || 0) * 60) + Number(m[2] || 0);
 
-  return total > 0 && total <= 60;
+  return sec > 0 && sec <= 60;
 }
 
 /* =========================
-   ライブ判定（最優先）
+   ライブ判定（最終形）
 ========================= */
 function isLive(v) {
-  return v?.snippet?.liveBroadcastContent !== "none";
+
+  const title = (v.snippet?.title || "").toLowerCase();
+
+  const liveKeywords =
+    title.includes("配信") ||
+    title.includes("ライブ") ||
+    title.includes("live") ||
+    title.includes("歌枠") ||
+    title.includes("雑談");
+
+  const d = v.contentDetails?.duration;
+  if (!d) return liveKeywords;
+
+  const m = d.match(/PT(?:(\d+)M)?(?:(\d+)S)?/);
+  if (!m) return liveKeywords;
+
+  const sec = (Number(m[1] || 0) * 60) + Number(m[2] || 0);
+
+  // 30分以上はライブ扱い
+  return liveKeywords || sec >= 1800;
 }
 
 /* =========================
-   アーカイブ取得＆分類
+   メイン
 ========================= */
-async function loadArchive() {
+async function load() {
 
   const el = document.getElementById("content");
   el.innerHTML = "読み込み中...";
 
-  try {
+  const ch = await fetch(
+    `https://www.googleapis.com/youtube/v3/channels?part=contentDetails&id=${CHANNEL_ID}&key=${API_KEY}`
+  ).then(r => r.json());
 
-    const ch = await fetch(
-      `https://www.googleapis.com/youtube/v3/channels?part=contentDetails&id=${CHANNEL_ID}&key=${API_KEY}`
-    ).then(r => r.json());
+  const uploadsId =
+    ch?.items?.[0]?.contentDetails?.relatedPlaylists?.uploads;
 
-    const uploadsId =
-      ch?.items?.[0]?.contentDetails?.relatedPlaylists?.uploads;
+  const pl = await fetch(
+    `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet,contentDetails&playlistId=${uploadsId}&maxResults=50&key=${API_KEY}`
+  ).then(r => r.json());
 
-    if (!uploadsId) throw new Error("uploads取得失敗");
+  const ids = (pl.items || [])
+    .map(v => v?.snippet?.resourceId?.videoId)
+    .filter(Boolean)
+    .join(",");
 
-    const pl = await fetch(
-      `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet,contentDetails&playlistId=${uploadsId}&maxResults=50&key=${API_KEY}`
-    ).then(r => r.json());
+  const vd = await fetch(
+    `https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails&id=${ids}&key=${API_KEY}`
+  ).then(r => r.json());
 
-    const ids = (pl.items || [])
-      .map(v => v?.snippet?.resourceId?.videoId)
-      .filter(Boolean)
-      .join(",");
+  const videos = vd.items || [];
 
-    const vd = await fetch(
-      `https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails&id=${ids}&key=${API_KEY}`
-    ).then(r => r.json());
+  const g = {
+    live: [],
+    shorts: [],
+    uta: [],
+    original: [],
+    clip: []
+  };
 
-    const videos = vd.items || [];
-
-    /* =========================
-       吸収型カテゴリ（otherなし）
-    ========================= */
-    const groups = {
-      live: [],
-      uta: [],
-      original: [],
-      clip: [],
-      shorts: []
-    };
-
-    const match = (t, list) =>
-      list.some(w => (t || "").toLowerCase().includes(w));
-
-    const html = (v) => {
-      const id = v.id;
-      const title = v.snippet?.title || "";
-
-      return `
-        <div>
-          <div class="thumb">
-            <img src="https://i.ytimg.com/vi/${id}/hqdefault.jpg">
-          </div>
-          <div class="title">
-            <a href="https://www.youtube.com/watch?v=${id}" target="_blank">${title}</a>
-          </div>
+  const html = (v) => {
+    const id = v.id;
+    const t = v.snippet?.title || "";
+    return `
+      <div>
+        <div class="thumb">
+          <img src="https://i.ytimg.com/vi/${id}/hqdefault.jpg">
         </div>
-      `;
-    };
-
-    videos.forEach(v => {
-
-      const title = v.snippet?.title || "";
-      const card = html(v);
-
-      /* =========================
-         優先順位（絶対固定）
-      ========================= */
-
-      if (isLive(v)) return groups.live.push(card);
-      if (isShort(v)) return groups.shorts.push(card);
-
-      if (match(title, ["切り抜き","clip","highlight","まとめ"]))
-        return groups.clip.push(card);
-
-      if (match(title, ["歌ってみた","cover"]))
-        return groups.uta.push(card);
-
-      if (match(title, ["オリジナル","original","mv","music video","試聴"]))
-        return groups.original.push(card);
-
-      /* ★other廃止 → オリ曲へ吸収 */
-      groups.original.push(card);
-    });
-
-    el.innerHTML = `
-      <div><h3>ライブ</h3><div class="video-grid">${groups.live.join("")}</div></div>
-      <div><h3>歌ってみた</h3><div class="video-grid">${groups.uta.join("")}</div></div>
-      <div><h3>オリジナル / 試聴</h3><div class="video-grid">${groups.original.join("")}</div></div>
-      <div><h3>切り抜き</h3><div class="video-grid">${groups.clip.join("")}</div></div>
-      <div><h3>ショート</h3><div class="video-grid">${groups.shorts.join("")}</div></div>
+        <div class="title">${t}</div>
+      </div>
     `;
+  };
 
-  } catch (e) {
-    el.innerHTML = `<pre style="color:red;">${e.message}</pre>`;
-  }
+  videos.forEach(v => {
+
+    const card = html(v);
+    const title = (v.snippet?.title || "").toLowerCase();
+
+    /* 優先順位固定 */
+    if (isLive(v)) return g.live.push(card);
+    if (isShort(v)) return g.shorts.push(card);
+
+    if (title.includes("切り抜き")) return g.clip.push(card);
+    if (title.includes("歌ってみた")) return g.uta.push(card);
+    if (title.includes("mv") || title.includes("オリジナル"))
+      return g.original.push(card);
+
+    /* ★吸収（otherなし） */
+    g.original.push(card);
+  });
+
+  el.innerHTML = `
+    <h3>ライブ</h3><div class="video-grid">${g.live.join("")}</div>
+    <h3>歌ってみた</h3><div class="video-grid">${g.uta.join("")}</div>
+    <h3>オリ曲 / MV / 試聴</h3><div class="video-grid">${g.original.join("")}</div>
+    <h3>切り抜き</h3><div class="video-grid">${g.clip.join("")}</div>
+    <h3>ショート</h3><div class="video-grid">${g.shorts.join("")}</div>
+  `;
 }
+
+load();
 
 </script>
 
