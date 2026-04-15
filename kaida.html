@@ -21,7 +21,6 @@ body {
   box-shadow: 0 10px 25px rgba(0,0,0,0.1);
 }
 
-/* 上部 */
 .top {
   display: flex;
   gap: 16px;
@@ -40,7 +39,6 @@ img {
   font-weight: bold;
 }
 
-/* タブ */
 .tabs {
   display: flex;
   gap: 10px;
@@ -60,19 +58,16 @@ img {
   color: white;
 }
 
-/* コンテンツ */
 .content {
   margin-top: 15px;
 }
 
-/* グリッド */
 .video-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 8px;
 }
 
-/* サムネ */
 .thumb {
   width: 100%;
   aspect-ratio: 16 / 9;
@@ -86,7 +81,6 @@ img {
   object-fit: cover;
 }
 
-/* タイトル */
 .title {
   margin-top: 4px;
   font-size: 11px;
@@ -101,17 +95,7 @@ img {
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
-
-/* 戻る */
-.back {
-  display: inline-block;
-  margin-top: 20px;
-  font-size: 13px;
-  color: #666;
-  text-decoration: none;
-}
 </style>
-
 </head>
 
 <body>
@@ -126,7 +110,6 @@ img {
     </div>
   </div>
 
-  <!-- タブ -->
   <div class="tabs">
     <div class="tab" onclick="showTab(event, 'goods')">グッズ</div>
     <div class="tab" onclick="showTab(event, 'song')">歌枠</div>
@@ -136,28 +119,12 @@ img {
 
   <div class="content" id="content"></div>
 
-  <a href="index.html" class="back">← Back</a>
-
 </div>
 
 <script>
 
 const CHANNEL_ID = "UCo2N7C-Z91waaR6lF3LL_jw";
 
-/* -------------------------
-   状態保存
-------------------------- */
-function saveTab(type) {
-  localStorage.setItem("lastTab", type);
-}
-
-function getSavedTab() {
-  return localStorage.getItem("lastTab") || "goods";
-}
-
-/* -------------------------
-   データ
-------------------------- */
 const data = {
   goods: ["誕生日グッズ2024", "アクリルスタンド"],
   song: ["歌枠まとめ", "アニソン歌枠"],
@@ -165,20 +132,42 @@ const data = {
 };
 
 /* -------------------------
-   タブ切り替え
+   保存
+------------------------- */
+function saveTab(type) {
+  localStorage.setItem("lastTab", type);
+}
+
+/* -------------------------
+   読み込み
+------------------------- */
+function getSavedTab() {
+  return localStorage.getItem("lastTab") || "goods";
+}
+
+/* -------------------------
+   タブ表示（ここが本体）
 ------------------------- */
 function showTab(event, type) {
 
   saveTab(type);
 
+  // 全タブの見た目リセット
   document.querySelectorAll(".tab").forEach(tab => {
     tab.classList.remove("active");
   });
 
-  if (event && event.target) {
-    event.target.classList.add("active");
-  }
+  // active復元（ここが重要）
+  document.querySelectorAll(".tab").forEach(tab => {
+    if (tab.textContent.includes(type === "goods" ? "グッズ" :
+                                type === "song" ? "歌枠" :
+                                type === "archive" ? "アーカイブ" :
+                                "お知らせ")) {
+      tab.classList.add("active");
+    }
+  });
 
+  // 表示切替
   if (type === "archive") {
     loadArchive();
     return;
@@ -187,65 +176,3 @@ function showTab(event, type) {
   const list = data[type] || [];
 
   document.getElementById("content").innerHTML =
-    "<ul>" + list.map(item => `<li>${item}</li>`).join("") + "</ul>";
-}
-
-/* -------------------------
-   YouTube直RSS（安定版）
-------------------------- */
-async function loadArchive() {
-
-  const res = await fetch(
-    "https://www.youtube.com/feeds/videos.xml?channel_id=" + CHANNEL_ID
-  );
-
-  const text = await res.text();
-
-  const parser = new DOMParser();
-  const xml = parser.parseFromString(text, "text/xml");
-
-  const entries = [...xml.querySelectorAll("entry")];
-
-  const videos = entries.slice(0, 6).map(entry => {
-
-    const title = entry.querySelector("title")?.textContent;
-    const link = entry.querySelector("link")?.getAttribute("href");
-
-    const id = link.split("v=")[1];
-
-    return `
-      <div>
-        <div class="thumb">
-          <img src="https://i.ytimg.com/vi/${id}/hqdefault.jpg">
-        </div>
-        <div class="title">
-          <a href="${link}" target="_blank">${title}</a>
-        </div>
-      </div>
-    `;
-  }).join("");
-
-  document.getElementById("content").innerHTML =
-    `<div class="video-grid">${videos}</div>`;
-}
-
-/* -------------------------
-   初期表示（復元）
-------------------------- */
-function init() {
-  const saved = getSavedTab();
-
-  const fakeEvent = { target: document.querySelector(".tab") };
-
-  showTab(fakeEvent, saved);
-}
-
-/* -------------------------
-   起動
-------------------------- */
-init();
-
-</script>
-
-</body>
-</html>
