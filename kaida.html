@@ -2,57 +2,50 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>甲斐田 晴</title>
+<title>甲斐田　晴</title>
 
 <style>
 body {
   font-family: sans-serif;
   background: #f6f7fb;
-  padding: 20px;
+  margin: 0;
+  padding: 0;
   color: #222;
 }
 
-.card {
-  max-width: 600px;
-  margin: 0 auto;
-  background: white;
+/* UIそのまま */
+.header {
+  text-align: center;
   padding: 20px;
+  background: white;
+}
+
+.header img {
+  width: 80px;
+  height: 80px;
   border-radius: 16px;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.1);
 }
 
-/* 上部 */
-.top {
-  display: flex;
-  gap: 16px;
-  align-items: center;
+.desc {
+  font-size: 12px;
+  color: #666;
 }
 
-img {
-  width: 100px;
-  height: 100px;
-  border-radius: 16px;
-  object-fit: cover;
-}
-
-.name {
-  font-size: 20px;
-  font-weight: bold;
-}
-
-/* タブ */
 .tabs {
   display: flex;
+  justify-content: center;
   gap: 10px;
-  margin-top: 20px;
+  background: white;
+  padding: 10px;
+  border-top: 1px solid #eee;
 }
 
 .tab {
-  padding: 6px 10px;
+  padding: 6px 12px;
   background: #eee;
   border-radius: 8px;
-  font-size: 13px;
   cursor: pointer;
+  font-size: 13px;
 }
 
 .tab.active {
@@ -60,70 +53,48 @@ img {
   color: white;
 }
 
-/* 中身 */
 .content {
-  margin-top: 15px;
+  padding: 20px;
 }
 
-.content ul {
-  padding-left: 18px;
-}
-
-.content li {
-  margin-bottom: 6px;
-}
-
-/* 戻る */
 .back {
   display: inline-block;
-  margin-top: 20px;
+  margin: 10px 20px;
   font-size: 13px;
   color: #666;
   text-decoration: none;
 }
-</style>
 
+</style>
 </head>
 
 <body>
 
-<div class="card">
-
-  <div class="top">
-    <img src="images/kaida.png">
-    <div>
-      <div class="name">甲斐田 晴</div>
-      <div style="font-size:12px;color:#666;">歌・雑談・ゲーム配信</div>
-    </div>
-  </div>
-
-  <!-- タブ -->
-  <div class="tabs">
-    <div class="tab" onclick="showTab(event, 'goods')">グッズ</div>
-    <div class="tab" onclick="showTab(event, 'song')">歌枠</div>
-    <div class="tab" onclick="showTab(event, 'archive')">アーカイブ</div>
-    <div class="tab" onclick="showTab(event, 'news')">お知らせ</div>
-  </div>
-
-  <div class="content" id="content"></div>
-
-  <a href="index.html" class="back">← Back</a>
-
+<!-- UIそのまま -->
+<div class="header">
+  <img src="images/kaida.png">
+  <div class="desc">(グッズ)(アーカイブ)(歌枠)(お知らせ)</div>
 </div>
 
-<script>
+<div class="tabs">
+  <div class="tab" onclick="showTab(event, 'goods')">グッズ</div>
+  <div class="tab" onclick="showTab(event, 'song')">歌枠</div>
+  <div class="tab" onclick="showTab(event, 'archive')">アーカイブ</div>
+  <div class="tab" onclick="showTab(event, 'news')">お知らせ</div>
+</div>
 
-/* =========================
-   API設定
-========================= */
+<div class="content" id="content"></div>
+
+<a href="index.html" class="back">← Back</a>
+
+<script>
 
 const CHANNEL_ID = "UCo2N7C-Z91waaR6lF3LL_jw";
 const API_KEY = "AIzaSyDNqDI1bIEQpWahutCP_w3QpLoQvdcde78";
 
-/* =========================
-   UI用データ
-========================= */
-
+/* =====================
+   UIデータ
+===================== */
 const data = {
   goods: [
     "誕生日グッズ2024",
@@ -139,15 +110,17 @@ const data = {
   ]
 };
 
-/* =========================
-   タブ（保存＋復元）
-========================= */
-
+/* =====================
+   タブ復元
+===================== */
 window.addEventListener("load", () => {
   const saved = localStorage.getItem("activeTab") || "goods";
   showTab(null, saved);
 });
 
+/* =====================
+   タブ処理
+===================== */
 function showTab(e, type) {
 
   document.querySelectorAll(".tab").forEach(tab => {
@@ -165,16 +138,16 @@ function showTab(e, type) {
   if (type !== "archive") {
     content.innerHTML =
       "<ul>" +
-      data[type].map(item => `<li>${item}</li>`).join("") +
+      data[type].map(v => `<li>${v}</li>`).join("") +
       "</ul>";
   } else {
     loadArchive();
   }
 }
 
-/* =========================
-   YouTubeユーティリティ
-========================= */
+/* =====================
+   YouTube判定
+===================== */
 
 function parseDuration(d) {
   if (!d) return 0;
@@ -189,24 +162,16 @@ function isShort(v) {
 
 function isLive(v) {
   const sec = parseDuration(v.contentDetails?.duration);
-  const title = (v.snippet?.title || "").toLowerCase();
-
-  return (
-    sec >= 3600 ||
-    title.includes("配信") ||
-    title.includes("ライブ") ||
-    title.includes("live") ||
-    title.includes("歌枠") ||
-    title.includes("雑談")
-  );
+  const t = (v.snippet?.title || "").toLowerCase();
+  return sec >= 3600 || t.includes("配信") || t.includes("ライブ") || t.includes("live");
 }
 
 function isClip(v) {
-  return (v.snippet?.title || "").toLowerCase().includes("切り抜き");
+  return (v.snippet?.title || "").includes("切り抜き");
 }
 
 function isSong(v) {
-  return (v.snippet?.title || "").toLowerCase().includes("歌ってみた");
+  return (v.snippet?.title || "").includes("歌ってみた");
 }
 
 function isOriginal(v) {
@@ -214,16 +179,15 @@ function isOriginal(v) {
   return t.includes("オリジナル") || t.includes("mv") || t.includes("試聴");
 }
 
-/* =========================
-   アーカイブ取得
-========================= */
+/* =====================
+   アーカイブ
+===================== */
 
 async function loadArchive() {
 
   const el = document.getElementById("content");
 
   try {
-
     el.innerHTML = "loading...";
 
     const ch = await fetch(
