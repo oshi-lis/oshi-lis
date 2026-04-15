@@ -147,6 +147,10 @@ img {
 </div>
 
 <script>
+function debug(msg) {
+  document.getElementById("content").innerHTML =
+    `<pre style="font-size:12px; background:#000; color:#0f0; padding:10px;">${msg}</pre>`;
+}
 const CHANNEL_ID = "UCo2N7C-Z91waaR6lF3LL_jw";
 
 const data = {
@@ -187,8 +191,7 @@ function showTab(event, type) {
 ========================= */
 async function loadArchive() {
 
-console.log("① loadArchive開始");
-console.log("② fetch前");
+debug("① loadArchive開始");
 
   const res = await fetch(
     "https://api.rss2json.com/v1/api.json?rss_url=" +
