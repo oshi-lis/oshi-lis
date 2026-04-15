@@ -12,34 +12,6 @@ body {
   color: #222;
 }
 
-.card {
-  max-width: 700px;
-  margin: 0 auto;
-  background: white;
-  padding: 20px;
-  border-radius: 16px;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-}
-
-.tabs {
-  display: flex;
-  gap: 10px;
-  margin-top: 20px;
-}
-
-.tab {
-  padding: 6px 10px;
-  background: #eee;
-  border-radius: 8px;
-  font-size: 13px;
-  cursor: pointer;
-}
-
-.tab.active {
-  background: #222;
-  color: white;
-}
-
 .video-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -63,17 +35,7 @@ body {
 
 <body>
 
-<div class="card">
-
-  <h2>推しアーカイブ</h2>
-
-  <div class="tabs">
-    <div class="tab" onclick="load()">更新</div>
-  </div>
-
-  <div id="content">読み込み待機中</div>
-
-</div>
+<div id="content">loading...</div>
 
 <script>
 
@@ -81,64 +43,59 @@ const CHANNEL_ID = "UCo2N7C-Z91waaR6lF3LL_jw";
 const API_KEY = "AIzaSyDNqDI1bIEQpWahutCP_w3QpLoQvdcde78";
 
 /* =========================
-   Shorts判定（完全固定）
+   duration → 秒変換
+========================= */
+function parseDuration(d) {
+  if (!d) return 0;
+  const m = d.match(/PT(?:(\d+)M)?(?:(\d+)S)?/);
+  if (!m) return 0;
+  return (Number(m[1] || 0) * 60) + Number(m[2] || 0);
+}
+
+/* =========================
+   Shorts判定（安全）
 ========================= */
 function isShort(v) {
-
-  const d = v.contentDetails?.duration;
-  if (typeof d !== "string") return false;
-
-  const m = d.match(/PT(?:(\d+)M)?(?:(\d+)S)?/);
-  if (!m) return false;
-
-  const sec = (Number(m[1] || 0) * 60) + Number(m[2] || 0);
-
+  const sec = parseDuration(v.contentDetails?.duration);
   return sec > 0 && sec <= 60;
 }
 
 /* =========================
-   ライブ判定（最終形）
+   ライブ判定（最終強化版）
 ========================= */
 function isLive(v) {
 
   const title = (v.snippet?.title || "").toLowerCase();
+  const sec = parseDuration(v.contentDetails?.duration);
 
-  const liveKeywords =
+  const keyword =
     title.includes("配信") ||
     title.includes("ライブ") ||
     title.includes("live") ||
     title.includes("歌枠") ||
     title.includes("雑談");
 
-  const d = v.contentDetails?.duration;
-  if (!d) return liveKeywords;
+  const longVideo = sec >= 1800; // 30分以上はライブ扱い
 
-  const m = d.match(/PT(?:(\d+)M)?(?:(\d+)S)?/);
-  if (!m) return liveKeywords;
-
-  const sec = (Number(m[1] || 0) * 60) + Number(m[2] || 0);
-
-  // 30分以上はライブ扱い
-  return liveKeywords || sec >= 1800;
+  return keyword || longVideo;
 }
 
 /* =========================
-   メイン
+   main
 ========================= */
 async function load() {
 
   const el = document.getElementById("content");
-  el.innerHTML = "読み込み中...";
+  el.innerHTML = "loading...";
 
   const ch = await fetch(
     `https://www.googleapis.com/youtube/v3/channels?part=contentDetails&id=${CHANNEL_ID}&key=${API_KEY}`
   ).then(r => r.json());
 
-  const uploadsId =
-    ch?.items?.[0]?.contentDetails?.relatedPlaylists?.uploads;
+  const uploads = ch?.items?.[0]?.contentDetails?.relatedPlaylists?.uploads;
 
   const pl = await fetch(
-    `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet,contentDetails&playlistId=${uploadsId}&maxResults=50&key=${API_KEY}`
+    `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet,contentDetails&playlistId=${uploads}&maxResults=50&key=${API_KEY}`
   ).then(r => r.json());
 
   const ids = (pl.items || [])
@@ -157,7 +114,8 @@ async function load() {
     shorts: [],
     uta: [],
     original: [],
-    clip: []
+    clip: [],
+    unknown: []
   };
 
   const html = (v) => {
@@ -175,28 +133,32 @@ async function load() {
 
   videos.forEach(v => {
 
-    const card = html(v);
     const title = (v.snippet?.title || "").toLowerCase();
+    const card = html(v);
 
-    /* 優先順位固定 */
+    /* =========================
+       優先順位（絶対固定）
+    ========================= */
+
     if (isLive(v)) return g.live.push(card);
     if (isShort(v)) return g.shorts.push(card);
 
     if (title.includes("切り抜き")) return g.clip.push(card);
     if (title.includes("歌ってみた")) return g.uta.push(card);
-    if (title.includes("mv") || title.includes("オリジナル"))
+    if (title.includes("オリジナル") || title.includes("mv"))
       return g.original.push(card);
 
-    /* ★吸収（otherなし） */
-    g.original.push(card);
+    /* ★重要：オリ曲に絶対入れない */
+    return g.unknown.push(card);
   });
 
   el.innerHTML = `
     <h3>ライブ</h3><div class="video-grid">${g.live.join("")}</div>
     <h3>歌ってみた</h3><div class="video-grid">${g.uta.join("")}</div>
-    <h3>オリ曲 / MV / 試聴</h3><div class="video-grid">${g.original.join("")}</div>
+    <h3>オリ曲 / MV</h3><div class="video-grid">${g.original.join("")}</div>
     <h3>切り抜き</h3><div class="video-grid">${g.clip.join("")}</div>
     <h3>ショート</h3><div class="video-grid">${g.shorts.join("")}</div>
+    <h3>未分類（確認用）</h3><div class="video-grid">${g.unknown.join("")}</div>
   `;
 }
 
