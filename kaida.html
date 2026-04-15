@@ -18,6 +18,48 @@ body {
   background: white;
   padding: 20px;
   border-radius: 16px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+}
+
+.top {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+
+img {
+  width: 100px;
+  height: 100px;
+  border-radius: 16px;
+  object-fit: cover;
+}
+
+.name {
+  font-size: 20px;
+  font-weight: bold;
+}
+
+.tabs {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.tab {
+  padding: 6px 10px;
+  background: #eee;
+  border-radius: 8px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.tab.active {
+  background: #222;
+  color: white;
+}
+
+.content {
+  margin-top: 15px;
 }
 
 .video-grid {
@@ -28,7 +70,17 @@ body {
 
 .thumb img {
   width: 100%;
+  aspect-ratio: 16/9;
   border-radius: 8px;
+  object-fit: cover;
+}
+
+.back {
+  display: inline-block;
+  margin-top: 20px;
+  font-size: 13px;
+  color: #666;
+  text-decoration: none;
 }
 </style>
 </head>
@@ -36,7 +88,26 @@ body {
 <body>
 
 <div class="card">
-  <div id="content">loading...</div>
+
+  <div class="top">
+    <img src="images/kaida.png">
+    <div>
+      <div class="name">甲斐田 晴</div>
+      <div style="font-size:12px;color:#666;">歌・雑談・ゲーム配信</div>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <div class="tab" onclick="showTab(event, 'goods')">グッズ</div>
+    <div class="tab" onclick="showTab(event, 'song')">歌枠</div>
+    <div class="tab" onclick="showTab(event, 'archive')">アーカイブ</div>
+    <div class="tab" onclick="showTab(event, 'news')">お知らせ</div>
+  </div>
+
+  <div class="content" id="content"></div>
+
+  <a href="index.html" class="back">← Back</a>
+
 </div>
 
 <script>
@@ -45,60 +116,49 @@ const CHANNEL_ID = "UCo2N7C-Z91waaR6lF3LL_jw";
 const API_KEY = "AIzaSyDNqDI1bIEQpWahutCP_w3QpLoQvdcde78";
 
 /* =========================
-   安全：全部取得（playlist）
+   タブ
 ========================= */
-async function getAllPlaylistItems(playlistId){
+function showTab(e,type){
 
-  var all = [];
-  var pageToken = "";
+  document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
 
-  while(true){
+  const map=["goods","song","archive","news"];
+  const idx = map.indexOf(type);
+  if(idx>=0) document.querySelectorAll(".tab")[idx].classList.add("active");
 
-    var url = "https://www.googleapis.com/youtube/v3/playlistItems?part=snippet,contentDetails&playlistId="
-      + playlistId
-      + "&maxResults=50"
-      + "&key=" + API_KEY;
+  if(type !== "archive"){
+    const data={
+      goods:["誕生日グッズ2024","アクリルスタンド"],
+      song:["アニソン縛り歌枠","深夜歌枠"],
+      news:["新衣装発表","ライブ出演"]
+    };
 
-    if(pageToken){
-      url += "&pageToken=" + pageToken;
-    }
+    document.getElementById("content").innerHTML =
+      "<ul>" + (data[type]||[]).map(v=>`<li>${v}</li>`).join("") + "</ul>";
 
-    var res = await fetch(url);
-    var data = await res.json();
-
-    if(data.items){
-      all = all.concat(data.items);
-    }
-
-    if(!data.nextPageToken) break;
-
-    pageToken = data.nextPageToken;
+    return;
   }
 
-  return all;
+  loadArchive();
 }
 
 /* =========================
-   安全：videos分割取得
+   ★追加：videos分割取得
 ========================= */
-async function getVideosByIds(ids){
+async function fetchVideosInChunks(ids){
 
-  var all = [];
+  let all = [];
 
-  for(var i=0;i<ids.length;i+=50){
+  for(let i = 0; i < ids.length; i += 50){
 
-    var chunk = ids.slice(i, i+50);
+    const part = ids.slice(i, i + 50).join(",");
 
-    var url = "https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails&id="
-      + chunk.join(",")
-      + "&key=" + API_KEY;
+    const res = await fetch(
+      `https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails&id=${part}&key=${API_KEY}`
+    );
 
-    var res = await fetch(url);
-    var data = await res.json();
-
-    if(data.items){
-      all = all.concat(data.items);
-    }
+    const data = await res.json();
+    all = all.concat(data.items || []);
   }
 
   return all;
@@ -109,77 +169,82 @@ async function getVideosByIds(ids){
 ========================= */
 function parseDuration(d){
   if(!d) return 0;
-  var m = d.match(/PT(?:(\d+)M)?(?:(\d+)S)?/);
+  const m = d.match(/PT(?:(\d+)M)?(?:(\d+)S)?/);
   if(!m) return 0;
   return (Number(m[1]||0)*60 + Number(m[2]||0));
 }
 
 /* =========================
-   メイン
+   アーカイブ
 ========================= */
-async function load(){
+async function loadArchive(){
 
-  var el = document.getElementById("content");
-  el.innerHTML = "loading...";
+  const el=document.getElementById("content");
+  el.innerHTML="loading...";
 
-  try{
+  const ch=await fetch(
+    `https://www.googleapis.com/youtube/v3/channels?part=contentDetails&id=${CHANNEL_ID}&key=${API_KEY}`
+  ).then(r=>r.json());
 
-    // チャンネル
-    var ch = await fetch(
-      "https://www.googleapis.com/youtube/v3/channels?part=contentDetails&id="
-      + CHANNEL_ID + "&key=" + API_KEY
-    ).then(r=>r.json());
+  const uploads=ch.items[0].contentDetails.relatedPlaylists.uploads;
 
-    var uploads = ch.items[0].contentDetails.relatedPlaylists.uploads;
+  const pl=await fetch(
+    `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet,contentDetails&playlistId=${uploads}&maxResults=50&key=${API_KEY}`
+  ).then(r=>r.json());
 
-    // 全動画
-    var pl = await getAllPlaylistItems(uploads);
+  // ★ここだけ変更（配列で持つ）
+  const ids = pl.items.map(v=>v.snippet.resourceId.videoId);
 
-    var ids = pl.map(function(v){
-      return v.snippet.resourceId.videoId;
-    });
+  // ★ここだけ変更（分割取得）
+  const videos = await fetchVideosInChunks(ids);
 
-    var videos = await getVideosByIds(ids);
+  const g={
+    live:[],
+    song:[],
+    original:[],
+    clip:[],
+    short:[]
+  };
 
-    // 分類
-    var g = {live:[], song:[], original:[], clip:[], short:[]};
+  videos.forEach(v=>{
+    const title = v.snippet.title || "";
+    const sec = parseDuration(v.contentDetails.duration);
 
-    videos.forEach(function(v){
+    if(title.includes("切り抜き") || title.includes("clip")) return g.clip.push(v);
+    if(title.includes("オリジナル") || title.includes("mv") || title.includes("試聴")) return g.original.push(v);
+    if(title.includes("歌ってみた") || title.includes("cover")) return g.song.push(v);
+    if(title.includes("配信") || title.includes("雑談") || sec >= 1800) return g.live.push(v);
+    if(sec <= 60) return g.short.push(v);
+  });
 
-      var title = v.snippet.title || "";
-      var sec = parseDuration(v.contentDetails.duration);
+  const render=a=>a.map(v=>`
+    <div class="thumb">
+      <img src="https://i.ytimg.com/vi/${v.id}/hqdefault.jpg">
+      <div>${v.snippet.title}</div>
+    </div>
+  `).join("");
 
-      if(title.indexOf("切り抜き") !== -1) return g.clip.push(v);
-      if(title.indexOf("歌ってみた") !== -1) return g.song.push(v);
-      if(title.indexOf("オリジナル") !== -1) return g.original.push(v);
-      if(title.indexOf("配信") !== -1 || sec >= 1800) return g.live.push(v);
-      if(sec > 0 && sec <= 60) return g.short.push(v);
+  el.innerHTML=`
+    <h3>配信アーカイブ</h3>
+    <div class="video-grid">${render(g.live)}</div>
 
-    });
+    <h3>歌ってみた</h3>
+    <div class="video-grid">${render(g.song)}</div>
 
-    // 表示
-    function render(arr){
-      return arr.map(function(v){
-        return '<div class="thumb">'
-          + '<img src="https://i.ytimg.com/vi/' + v.id + '/hqdefault.jpg">'
-          + '<div>' + v.snippet.title + '</div>'
-          + '</div>';
-      }).join("");
-    }
+    <h3>オリ曲 / 試聴</h3>
+    <div class="video-grid">${render(g.original)}</div>
 
-    el.innerHTML =
-      "<h3>配信アーカイブ</h3><div class='video-grid'>" + render(g.live) + "</div>" +
-      "<h3>歌ってみた</h3><div class='video-grid'>" + render(g.song) + "</div>" +
-      "<h3>オリ曲</h3><div class='video-grid'>" + render(g.original) + "</div>" +
-      "<h3>切り抜き</h3><div class='video-grid'>" + render(g.clip) + "</div>" +
-      "<h3>ショート</h3><div class='video-grid'>" + render(g.short) + "</div>";
+    <h3>切り抜き</h3>
+    <div class="video-grid">${render(g.clip)}</div>
 
-  }catch(e){
-    el.innerHTML = "エラー出てる（APIキー or 通信）";
-  }
+    <h3>ショート</h3>
+    <div class="video-grid">${render(g.short)}</div>
+  `;
 }
 
-load();
+window.addEventListener("load", ()=>{
+  showTab(null, "archive");
+});
 
 </script>
 
