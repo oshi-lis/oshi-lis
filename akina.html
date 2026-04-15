@@ -126,10 +126,11 @@ let state = {
   tab: "archive",
   page: 1,
   videos: {
-    normal: [],
+    archive: [],
     song: [],
     original: [],
-    shorts: []
+    shorts: [],
+    clip: []
   }
 };
 
@@ -138,8 +139,15 @@ window.onload = () => {
   switchTab(saved);
 };
 
-function setActiveTab(tab){
+/* タブ保持 */
+function saveTab(tab){
+  localStorage.setItem("tab", tab);
+}
+
+/* タブUI */
+function setActive(tab){
   document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+
   document.querySelectorAll(".tab").forEach(t => {
     if(t.textContent.includes(
       tab === "archive" ? "アーカイブ" :
@@ -151,20 +159,20 @@ function setActiveTab(tab){
   });
 }
 
+/* タブ切替 */
 async function switchTab(tab){
 
   state.tab = tab;
   state.page = 1;
 
-  localStorage.setItem("tab", tab);
-
-  setActiveTab(tab);
+  saveTab(tab);
+  setActive(tab);
 
   const content = document.getElementById("content");
 
   if(tab !== "archive"){
     content.innerHTML = "<ul>" +
-      (tabData(tab)).map(v => `<li>${v}</li>`).join("") +
+      tabData(tab).map(v => `<li>${v}</li>`).join("") +
       "</ul>";
     return;
   }
@@ -177,6 +185,7 @@ async function switchTab(tab){
   renderArchive();
 }
 
+/* 静的タブ */
 function tabData(tab){
   return {
     song: ["歌枠1", "歌枠2"],
@@ -185,6 +194,7 @@ function tabData(tab){
   }[tab] || [];
 }
 
+/* API */
 async function fetchVideos(){
 
   const ch = await fetch(
@@ -200,21 +210,19 @@ async function fetchVideos(){
   return res.items || [];
 }
 
+/* 分類（復元版） */
 function classify(items){
 
   return {
-    normal: items.filter(v =>
-      !isShort(v) && !isSong(v) && !isOriginal(v)
+    archive: items.filter(v =>
+      !isSong(v) && !isOriginal(v) && !isShort(v) && !isClip(v)
     ),
 
     song: items.filter(v => isSong(v)),
     original: items.filter(v => isOriginal(v)),
-    shorts: items.filter(v => isShort(v))
+    shorts: items.filter(v => isShort(v)),
+    clip: items.filter(v => isClip(v))
   };
-}
-
-function isShort(v){
-  return /short/i.test(v.snippet.title);
 }
 
 function isSong(v){
@@ -225,10 +233,19 @@ function isOriginal(v){
   return /オリジナル|original/i.test(v.snippet.title);
 }
 
+function isShort(v){
+  return /short/i.test(v.snippet.title);
+}
+
+function isClip(v){
+  return /切り抜き|clip/i.test(v.snippet.title);
+}
+
+/* アーカイブ表示 */
 function renderArchive(){
 
   const PER_PAGE = 6;
-  const list = state.videos.normal;
+  const list = state.videos.archive;
 
   const start = (state.page - 1) * PER_PAGE;
   const items = list.slice(start, start + PER_PAGE);
@@ -250,6 +267,7 @@ function renderArchive(){
   `;
 }
 
+/* ページング */
 function goPage(p){
   state.page = p;
   renderArchive();
