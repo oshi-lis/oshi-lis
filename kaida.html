@@ -168,7 +168,7 @@ function render() {
 }
 
 /* =========================
-   アーカイブ（完全安定版）
+   安定取得
 ========================= */
 async function loadArchive() {
 
@@ -177,7 +177,7 @@ async function loadArchive() {
   try {
 
     // =========================
-    // ① uploads取得（ここが本体）
+    // uploads取得（安定ソース）
     // =========================
     const chRes = await fetch(
       `https://www.googleapis.com/youtube/v3/channels?part=contentDetails&id=${CHANNEL_ID}&key=${API_KEY}`
@@ -186,32 +186,41 @@ async function loadArchive() {
     const chData = await chRes.json();
 
     const uploadsId =
-      chData.items[0].contentDetails.relatedPlaylists.uploads;
+      chData.items?.[0]?.contentDetails?.relatedPlaylists?.uploads;
+
+    if (!uploadsId) throw new Error("uploads取得失敗");
 
     // =========================
-    // ② playlist取得
+    // playlist取得
     // =========================
     const plRes = await fetch(
-      `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId=${uploadsId}&maxResults=20&key=${API_KEY}`
+      `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId=${uploadsId}&maxResults=50&key=${API_KEY}`
     );
 
     const plData = await plRes.json();
 
-    const ids = plData.items
-      .map(v => v.snippet.resourceId.videoId)
+    const items = plData.items || [];
+
+    const ids = items
+      .map(v => v?.snippet?.resourceId?.videoId)
+      .filter(Boolean)
       .join(",");
 
+    if (!ids) throw new Error("videoId取得失敗");
+
     // =========================
-    // ③ videos詳細取得
+    // videos取得
     // =========================
     const vRes = await fetch(
-      `https://www.googleapis.com/youtube/v3/videos?part=snippet&id=${ids}&key=${API_KEY}`
+      `https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails&id=${ids}&key=${API_KEY}`
     );
 
     const vData = await vRes.json();
 
+    const videos = vData.items || [];
+
     // =========================
-    // 分類ルール（タイトルのみ）
+    // グループ
     // =========================
     const groups = {
       live: [],
@@ -227,15 +236,25 @@ async function loadArchive() {
       return list.some(w => t.includes(w));
     }
 
+    function getId(v) {
+      return v.id || v?.snippet?.resourceId?.videoId;
+    }
+
     function html(v) {
+
+      const id = getId(v);
+      const title = v.snippet?.title || "";
+
+      if (!id) return "";
+
       return `
         <div>
           <div class="thumb">
-            <img src="https://i.ytimg.com/vi/${v.id}/hqdefault.jpg">
+            <img src="https://i.ytimg.com/vi/${id}/hqdefault.jpg">
           </div>
           <div class="title">
-            <a href="https://www.youtube.com/watch?v=${v.id}" target="_blank">
-              ${v.snippet.title}
+            <a href="https://www.youtube.com/watch?v=${id}" target="_blank">
+              ${title}
             </a>
           </div>
         </div>
@@ -243,44 +262,46 @@ async function loadArchive() {
     }
 
     // =========================
-    // 分類（重要：順番）
+    // 分類（安定優先）
     // =========================
-    vData.items.forEach(v => {
+    videos.forEach(v => {
 
-      const title = v.snippet.title || "";
-      const htmlCard = html(v);
+      const title = v.snippet?.title || "";
+      const card = html(v);
 
-      // ① ライブ（最優先）
-      if (match(title, ["歌枠", "配信", "雑談", "live", "stream", "ライブ"])) {
-        groups.live.push(htmlCard);
+      if (!card) return;
+
+      // ① ライブ最優先
+      if (match(title, ["歌枠","配信","雑談","ライブ","live","stream"])) {
+        groups.live.push(card);
         return;
       }
 
       // ② 歌ってみた
-      if (match(title, ["歌ってみた", "cover"])) {
-        groups.uta.push(htmlCard);
+      if (match(title, ["歌ってみた","cover"])) {
+        groups.uta.push(card);
         return;
       }
 
       // ③ オリ曲
-      if (match(title, ["オリジナル", "mv", "music video", "original"])) {
-        groups.original.push(htmlCard);
+      if (match(title, ["オリジナル","mv","music video","original"])) {
+        groups.original.push(card);
         return;
       }
 
       // ④ 切り抜き
-      if (match(title, ["切り抜き", "clip", "highlight", "まとめ"])) {
-        groups.clip.push(htmlCard);
+      if (match(title, ["切り抜き","clip","highlight","まとめ"])) {
+        groups.clip.push(card);
         return;
       }
 
-      // ⑤ shorts（完全タイトルのみ）
-      if (match(title, ["#shorts", "shorts"])) {
-        groups.shorts.push(htmlCard);
+      // ⑤ shorts（完全タイトル依存）
+      if (match(title, ["#shorts","shorts"])) {
+        groups.shorts.push(card);
         return;
       }
 
-      groups.other.push(htmlCard);
+      groups.other.push(card);
     });
 
     // =========================
