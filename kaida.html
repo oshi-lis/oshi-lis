@@ -8,22 +8,41 @@
 body {
   font-family: sans-serif;
   background: #f6f7fb;
-  margin: 0;
   padding: 20px;
+  color: #222;
 }
 
-/* ヘッダー（固定） */
-.header {
-  font-size: 22px;
+.card {
+  max-width: 600px;
+  margin: 0 auto;
+  background: white;
+  padding: 20px;
+  border-radius: 16px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+}
+
+.top {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+
+.icon {
+  width: 100px;
+  height: 100px;
+  border-radius: 16px;
+  object-fit: cover;
+}
+
+.name {
+  font-size: 20px;
   font-weight: bold;
-  margin-bottom: 12px;
 }
 
-/* メインタブ */
 .tabs {
   display: flex;
-  gap: 8px;
-  margin-bottom: 12px;
+  gap: 10px;
+  margin-top: 20px;
 }
 
 .tab {
@@ -31,6 +50,7 @@ body {
   background: #eee;
   border-radius: 8px;
   cursor: pointer;
+  font-size: 13px;
 }
 
 .tab.active {
@@ -38,155 +58,136 @@ body {
   color: #fff;
 }
 
-/* 動画グリッド */
+.content {
+  margin-top: 15px;
+}
+
+/* ===== アーカイブUI ===== */
+.header-row{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:10px;
+}
+
+.refresh-btn{
+  font-size:12px;
+  cursor:pointer;
+  background:#eee;
+  border:none;
+  padding:4px 8px;
+  border-radius:6px;
+}
+
 .video-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 10px;
 }
 
-.video {
-  font-size: 12px;
-}
-
-.video img {
+.thumb img {
   width: 100%;
   border-radius: 8px;
 }
 
-/* ページ */
-.pagination {
-  margin-top: 10px;
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-
-.page {
-  padding: 4px 8px;
-  background: #eee;
-  border-radius: 6px;
-  cursor: pointer;
+.thumb a {
+  color: #222;
+  text-decoration: none;
   font-size: 12px;
 }
 
-.page.active {
-  background: #222;
-  color: #fff;
+.pagination {
+  margin-top: 12px;
+  display:flex;
+  gap:6px;
+  justify-content:center;
+  font-size:12px;
+}
+
+.page-btn{
+  padding:4px 8px;
+  background:#eee;
+  border-radius:6px;
+  cursor:pointer;
+}
+
+.page-btn.active{
+  background:#222;
+  color:#fff;
 }
 </style>
 </head>
 
 <body>
 
-<div class="header">甲斐田 晴</div>
+<div class="card">
 
-<!-- メインタブ（導線順） -->
-<div class="tabs">
-  <div class="tab" data-tab="archive">アーカイブ</div>
-  <div class="tab" data-tab="song">歌枠</div>
-  <div class="tab" data-tab="goods">グッズ</div>
-  <div class="tab" data-tab="news">お知らせ</div>
+  <div class="top">
+    <img src="images/kaida.png" class="icon">
+    <div>
+      <div class="name">甲斐田 晴</div>
+      <div style="font-size:12px;color:#666;">歌・雑談・ゲーム配信</div>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <div class="tab" onclick="showTab(event,'goods')">グッズ</div>
+    <div class="tab" onclick="showTab(event,'song')">歌枠</div>
+    <div class="tab" onclick="showTab(event,'archive')">アーカイブ</div>
+    <div class="tab" onclick="showTab(event,'news')">お知らせ</div>
+  </div>
+
+  <div class="content" id="content"></div>
+
 </div>
-
-<!-- 動的領域 -->
-<div id="app">loading...</div>
 
 <script>
 
-/* =========================
-   設定
-========================= */
-const API_KEY = "AIzaSyDNqDI1bIEQpWahutCP_w3QpLoQvdcde78";
 const CHANNEL_ID = "UCo2N7C-Z91waaR6lF3LL_jw";
-const PER_PAGE = 6;
+const API_KEY = "YOUR_API_KEY";
 
-/* =========================
-   状態管理
-========================= */
-let state = {
-  tab: "archive",
-  page: 1,
-  videos: [],
-  loadedAll: false
+const CACHE_KEY = "kaida_cache_v2";
+
+const data = {
+  goods: ["誕生日グッズ2024","アクリルスタンド"],
+  song: ["アニソン縛り歌枠","深夜歌枠"],
+  news: ["新衣装発表","ライブ出演"]
 };
 
-/* =========================
-   初期化
-   - タブ復元
-========================= */
-function init(){
+let videos = [];
+let currentPage = 1;
+const perPage = 6;
 
-  const savedTab = localStorage.getItem("tab");
+/* ===== タブ ===== */
+function showTab(e,type){
 
-  if(savedTab){
-    state.tab = savedTab;
-  }
+  document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
+  e.target.classList.add("active");
 
-  document.querySelectorAll(".tab").forEach(tabEl => {
+  const el = document.getElementById("content");
 
-    if(tabEl.dataset.tab === state.tab){
-      tabEl.classList.add("active");
-    }
-
-    tabEl.addEventListener("click", () => {
-
-      state.tab = tabEl.dataset.tab;
-      state.page = 1;
-
-      localStorage.setItem("tab", state.tab);
-
-      setActiveTab();
-      render();
-    });
-
-  });
-
-  setActiveTab();
-  render();
-}
-
-/* =========================
-   タブUI更新（固定構造）
-========================= */
-function setActiveTab(){
-
-  document.querySelectorAll(".tab").forEach(t=>{
-    t.classList.toggle("active", t.dataset.tab === state.tab);
-  });
-
-}
-
-/* =========================
-   メイン描画
-========================= */
-async function render(){
-
-  const app = document.getElementById("app");
-
-  if(state.tab !== "archive"){
-    app.innerHTML = `<div>${state.tab}（準備中）</div>`;
+  if(type==="archive"){
+    loadArchive();
     return;
   }
 
-  app.innerHTML = "loading...";
-
-  const list = await fetchVideos(6);
-  const ids = list.map(v => v.snippet.resourceId.videoId);
-  const details = await fetchDetails(ids);
-
-  state.videos = details;
-
-  drawVideos();
-
-  // 裏で追加取得
-  loadMore();
+  el.innerHTML =
+    "<ul>" +
+    (data[type]||[]).map(v=>`<li>${v}</li>`).join("") +
+    "</ul>";
 }
 
-/* =========================
-   初期取得（軽量）
-========================= */
-async function fetchVideos(limit){
+/* ===== duration ===== */
+function parseDuration(d){
+  if(!d) return 0;
+  const h=d.match(/(\d+)H/);
+  const m=d.match(/(\d+)M/);
+  const s=d.match(/(\d+)S/);
+  return (Number(h?.[1]||0)*3600)+(Number(m?.[1]||0)*60)+Number(s?.[1]||0);
+}
+
+/* ===== fetch ===== */
+async function getAllVideos(limit=100){
 
   const ch = await fetch(
     `https://www.googleapis.com/youtube/v3/channels?part=contentDetails&id=${CHANNEL_ID}&key=${API_KEY}`
@@ -194,132 +195,119 @@ async function fetchVideos(limit){
 
   const uploads = ch.items[0].contentDetails.relatedPlaylists.uploads;
 
-  let all = [];
-  let token = "";
+  let all=[];
+  let token="";
 
   while(true){
 
-    let url =
-      `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet,contentDetails&playlistId=${uploads}&maxResults=50&key=${API_KEY}`;
-
+    let url = `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet,contentDetails&playlistId=${uploads}&maxResults=50&key=${API_KEY}`;
     if(token) url += `&pageToken=${token}`;
 
     const res = await fetch(url).then(r=>r.json());
 
-    all = all.concat(res.items || []);
+    all = all.concat(res.items||[]);
 
-    if(all.length >= limit) break;
+    if(all.length>=limit) break;
     if(!res.nextPageToken) break;
 
-    token = res.nextPageToken;
+    token=res.nextPageToken;
   }
 
   return all;
 }
 
-/* =========================
-   詳細取得
-========================= */
-async function fetchDetails(ids){
+async function getDetails(ids){
 
-  let all = [];
+  let all=[];
 
   for(let i=0;i<ids.length;i+=50){
-
     const chunk = ids.slice(i,i+50);
 
     const res = await fetch(
-      `https://www.googleapis.com/youtube/v3/videos?part=snippet&id=${chunk.join(",")}&key=${API_KEY}`
+      `https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails&id=${chunk.join(",")}&key=${API_KEY}`
     ).then(r=>r.json());
 
-    all = all.concat(res.items || []);
+    all = all.concat(res.items||[]);
   }
 
   return all;
 }
 
-/* =========================
-   裏取得（全展開）
-========================= */
-async function loadMore(){
+/* ===== アーカイブロード ===== */
+async function loadArchive(){
 
-  if(state.loadedAll) return;
+  const el = document.getElementById("content");
 
-  const list = await fetchVideos(300);
-  const ids = list.map(v => v.snippet.resourceId.videoId);
-  const details = await fetchDetails(ids);
+  el.innerHTML = "loading...";
 
-  state.videos = dedupe([...state.videos, ...details]);
+  const cache = localStorage.getItem(CACHE_KEY);
 
-  state.loadedAll = true;
-
-  drawVideos();
-}
-
-/* =========================
-   重複削除
-========================= */
-function dedupe(arr){
-
-  const map = new Map();
-
-  arr.forEach(v=>{
-    map.set(v.id, v);
-  });
-
-  return [...map.values()];
-}
-
-/* =========================
-   描画（動画部分のみ更新）
-========================= */
-function drawVideos(){
-
-  const app = document.getElementById("app");
-
-  const start = (state.page - 1) * PER_PAGE;
-  const items = state.videos.slice(start, start + PER_PAGE);
-
-  const total = Math.ceil(state.videos.length / PER_PAGE);
-
-  let pages = "";
-
-  for(let i=1;i<=total;i++){
-
-    const label = (i === total) ? `${i}〜` : i;
-
-    pages += `
-      <div class="page ${i===state.page?'active':''}"
-           onclick="goPage(${i})">${label}</div>
-    `;
+  if(cache){
+    videos = JSON.parse(cache);
   }
 
-  app.innerHTML = `
-    <div class="video-grid">
-      ${items.map(v=>`
-        <div class="video">
-          <img src="https://i.ytimg.com/vi/${v.id}/hqdefault.jpg">
-          <div>${v.snippet.title}</div>
-        </div>
-      `).join("")}
+  const list = await getAllVideos(100);
+  const ids = list.map(v=>v.snippet.resourceId.videoId);
+  videos = await getDetails(ids);
+
+  localStorage.setItem(CACHE_KEY, JSON.stringify(videos));
+
+  currentPage = 1;
+  renderArchive();
+}
+
+/* ===== ページ描画 ===== */
+function renderArchive(){
+
+  const el = document.getElementById("content");
+
+  const start = (currentPage-1)*perPage;
+  const pageItems = videos.slice(start,start+perPage);
+
+  const render = arr => arr.map(v=>`
+    <div class="thumb">
+      <a href="https://www.youtube.com/watch?v=${v.id}" target="_blank">
+        <img src="https://i.ytimg.com/vi/${v.id}/hqdefault.jpg">
+        <div>${v.snippet.title}</div>
+      </a>
+    </div>
+  `).join("");
+
+  const totalPages = Math.ceil(videos.length/perPage);
+
+  el.innerHTML = `
+    <div class="header-row">
+      <h3>配信アーカイブ</h3>
+      <button class="refresh-btn" onclick="refreshArchive()">🔄更新</button>
     </div>
 
-    <div class="pagination">${pages}</div>
+    <div class="video-grid">${render(pageItems)}</div>
+
+    <div class="pagination">
+      ${Array.from({length: totalPages},(_,i)=>`
+        <div class="page-btn ${i+1===currentPage?'active':''}"
+             onclick="changePage(${i+1})">${i+1}</div>
+      `).join("")}
+    </div>
   `;
 }
 
-/* =========================
-   ページ切替
-========================= */
-function goPage(p){
-  state.page = p;
-  drawVideos();
+/* ===== ページ操作 ===== */
+function changePage(p){
+  currentPage = p;
+  renderArchive();
 }
 
-/* =========================
-   起動
-========================= */
-init();
+/* ===== 更新 ===== */
+function refreshArchive(){
+  localStorage.removeItem(CACHE_KEY);
+  loadArchive();
+}
+
+/* ===== 初期 ===== */
+const saved = localStorage.getItem("activeTab") || "goods";
+const target = document.querySelector(`.tab[onclick*="${saved}"]`);
+showTab({target}, saved);
 
 </script>
 
