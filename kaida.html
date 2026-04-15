@@ -129,9 +129,7 @@ h3 {
 <script>
 
 const CHANNEL_ID = "UCo2N7C-Z91waaR6lF3LL_jw";
-const API_KEY = "AIzaSyAhz5t0MJUGT_vx6p2m4rjOlqfu71PSpiE";
-
-let currentTab = "goods";
+const API_KEY = "YOUR_API_KEY";
 
 const data = {
   goods: ["誕生日グッズ2024", "アクリルスタンド"],
@@ -139,17 +137,35 @@ const data = {
   news: ["新衣装発表", "ライブ出演"]
 };
 
+/* =========================
+   タブ固定
+========================= */
+function saveTab(tab) {
+  localStorage.setItem("lastTab", tab);
+}
+
+function loadTab() {
+  return localStorage.getItem("lastTab") || "goods";
+}
+
+let currentTab = loadTab();
+
 function setTab(tab) {
   currentTab = tab;
+  saveTab(tab);
   render();
 }
 
-render();
+document.addEventListener("DOMContentLoaded", render);
 
+/* =========================
+   UI
+========================= */
 function render() {
 
+  const map = ["goods", "song", "archive", "news"];
+
   document.querySelectorAll(".tab").forEach((t, i) => {
-    const map = ["goods", "song", "archive", "news"];
     t.classList.toggle("active", map[i] === currentTab);
   });
 
@@ -165,43 +181,55 @@ function render() {
 }
 
 /* =========================
-   最終安定アーカイブ
+   Shorts判定（修正版）
+========================= */
+function isShort(v) {
+
+  const d = v.contentDetails?.duration || "";
+  const m = d.match(/PT(?:(\d+)M)?(?:(\d+)S)?/);
+
+  const min = parseInt(m?.[1] || "0");
+  const sec = parseInt(m?.[2] || "0");
+  const total = (min * 60) + sec;
+
+  const title = (v.snippet?.title || "").toLowerCase();
+
+  return total <= 60 && (
+    title.includes("#shorts") ||
+    title.includes("short")
+  );
+}
+
+/* =========================
+   アーカイブ
 ========================= */
 async function loadArchive() {
 
-  document.getElementById("content").innerHTML = "読み込み中...";
+  const el = document.getElementById("content");
+  el.innerHTML = "読み込み中...";
 
   try {
 
-    const chRes = await fetch(
+    const ch = await fetch(
       `https://www.googleapis.com/youtube/v3/channels?part=contentDetails&id=${CHANNEL_ID}&key=${API_KEY}`
-    );
+    ).then(r => r.json());
 
-    const chData = await chRes.json();
+    const uploadsId = ch?.items?.[0]?.contentDetails?.relatedPlaylists?.uploads;
 
-    const uploadsId =
-      chData.items?.[0]?.contentDetails?.relatedPlaylists?.uploads;
-
-    const plRes = await fetch(
+    const pl = await fetch(
       `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet,contentDetails&playlistId=${uploadsId}&maxResults=50&key=${API_KEY}`
-    );
+    ).then(r => r.json());
 
-    const plData = await plRes.json();
-
-    const items = plData.items || [];
-
-    const ids = items
+    const ids = (pl.items || [])
       .map(v => v?.snippet?.resourceId?.videoId)
       .filter(Boolean)
       .join(",");
 
-    const vRes = await fetch(
+    const vd = await fetch(
       `https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails&id=${ids}&key=${API_KEY}`
-    );
+    ).then(r => r.json());
 
-    const vData = await vRes.json();
-
-    const videos = vData.items || [];
+    const videos = vd.items || [];
 
     const groups = {
       live: [],
@@ -212,20 +240,8 @@ async function loadArchive() {
       other: []
     };
 
-    /* =========================
-       判定関数（最終安定版）
-    ========================= */
-
     const match = (t, list) =>
       list.some(w => (t || "").toLowerCase().includes(w));
-
-    const isShort = (v) => {
-      const d = v.contentDetails?.duration || "";
-      const m = d.match(/PT(?:(\d+)M)?(?:(\d+)S)?/);
-      const min = parseInt(m?.[1] || "0");
-      const sec = parseInt(m?.[2] || "0");
-      return min === 0 && sec <= 60;
-    };
 
     const html = (v) => {
       const id = v.id;
@@ -237,103 +253,49 @@ async function loadArchive() {
             <img src="https://i.ytimg.com/vi/${id}/hqdefault.jpg">
           </div>
           <div class="title">
-            <a href="https://www.youtube.com/watch?v=${id}" target="_blank">
-              ${title}
-            </a>
+            <a href="https://www.youtube.com/watch?v=${id}" target="_blank">${title}</a>
           </div>
         </div>
       `;
     };
-
-    /* =========================
-       分類（優先順位固定）
-    ========================= */
 
     videos.forEach(v => {
 
       const title = v.snippet?.title || "";
       const card = html(v);
 
-      if (!card) return;
+      if (isShort(v)) return groups.shorts.push(card);
 
-      // ① Shorts（最優先）
-      if (isShort(v)) {
-        groups.shorts.push(card);
-        return;
-      }
+      if (match(title, ["切り抜き","clip","highlight","まとめ"]))
+        return groups.clip.push(card);
 
-      // ② 切り抜き（守る）
-      if (match(title, ["切り抜き","clip","clips","highlight","まとめ"])) {
-        groups.clip.push(card);
-        return;
-      }
+      if (match(title, ["歌ってみた","cover"]))
+        return groups.uta.push(card);
 
-      // ③ 歌みた
-      if (match(title, ["歌ってみた","cover","covered"])) {
-        groups.uta.push(card);
-        return;
-      }
+      if (match(title, ["オリジナル","original","mv","music video"]))
+        return groups.original.push(card);
 
-      // ④ オリ曲
-      if (match(title, ["オリジナル","original","mv","music video","official"])) {
-        groups.original.push(card);
-        return;
-      }
-
-      // ⑤ ライブ（最後に弱く拾う）
-      if (match(title, ["配信","歌枠","ライブ","live","stream","雑談"])) {
-        groups.live.push(card);
-        return;
-      }
+      if (match(title, ["配信","歌枠","ライブ","live","stream"]))
+        return groups.live.push(card);
 
       groups.other.push(card);
     });
 
-    /* =========================
-       表示
-    ========================= */
-
-    document.getElementById("content").innerHTML = `
-
-      <div>
-        <h3>ライブ配信</h3>
-        <div class="video-grid">${groups.live.join("")}</div>
-      </div>
-
-      <div>
-        <h3>歌ってみた</h3>
-        <div class="video-grid">${groups.uta.join("")}</div>
-      </div>
-
-      <div>
-        <h3>オリジナル曲</h3>
-        <div class="video-grid">${groups.original.join("")}</div>
-      </div>
-
-      <div>
-        <h3>切り抜き</h3>
-        <div class="video-grid">${groups.clip.join("")}</div>
-      </div>
-
-      <div>
-        <h3>ショート</h3>
-        <div class="video-grid">${groups.shorts.join("")}</div>
-      </div>
-
-      <div>
-        <h3>その他</h3>
-        <div class="video-grid">${groups.other.join("")}</div>
-      </div>
-
+    el.innerHTML = `
+      <div><h3>ライブ</h3><div class="video-grid">${groups.live.join("")}</div></div>
+      <div><h3>歌ってみた</h3><div class="video-grid">${groups.uta.join("")}</div></div>
+      <div><h3>オリジナル</h3><div class="video-grid">${groups.original.join("")}</div></div>
+      <div><h3>切り抜き</h3><div class="video-grid">${groups.clip.join("")}</div></div>
+      <div><h3>ショート</h3><div class="video-grid">${groups.shorts.join("")}</div></div>
+      <div><h3>その他</h3><div class="video-grid">${groups.other.join("")}</div></div>
     `;
 
   } catch (e) {
-
-    document.getElementById("content").innerHTML =
-      `<pre style="color:red;">エラー\n${e.message}</pre>`;
+    el.innerHTML = `<pre style="color:red;">${e.message}</pre>`;
   }
 }
 
 </script>
+
 </body>
 </html>
