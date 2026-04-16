@@ -262,7 +262,8 @@ async function loadArchive(){
 
 /* ===== 描画 ===== */
 function render(){
-
+  console.log("RENDER ENTERED");
+  console.log("VIDEOS:", videos);
   const el = document.getElementById("content");
 
   const start = (currentPage-1)*perPage;
