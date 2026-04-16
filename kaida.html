@@ -262,18 +262,20 @@ async function loadArchive(){
 
 /* ===== 描画 ===== */
 function render(){
-  function render(){
-  console.log("RENDER START");
+
+  console.log("RENDER ENTERED");
+  console.log("VIDEOS:", videos);
+
   const el = document.getElementById("content");
 
-  const start = (currentPage-1)*perPage;
-  const pageItems = videos.slice(start,start+perPage);
+  const start = (currentPage - 1) * perPage;
+  const pageItems = videos.slice(start, start + perPage);
 
-  const total = Math.ceil(videos.length/perPage);
+  const total = Math.ceil(videos.length / perPage);
 
   el.innerHTML = `
     <div class="video-grid">
-      ${pageItems.map(v=>`
+      ${pageItems.map(v => `
         <div class="thumb">
           <a href="https://www.youtube.com/watch?v=${v.id}" target="_blank">
             <img src="https://i.ytimg.com/vi/${v.id}/hqdefault.jpg">
@@ -284,9 +286,9 @@ function render(){
     </div>
 
     <div class="pagination">
-      ${Array.from({length: total},(_,i)=>`
-        <div class="page-btn ${i+1===currentPage?'active':''}"
-          onclick="go(${i+1})">${i+1}</div>
+      ${Array.from({length: total}, (_, i) => `
+        <div class="page-btn ${i + 1 === currentPage ? 'active' : ''}"
+          onclick="go(${i + 1})">${i + 1}</div>
       `).join("")}
     </div>
   `;
