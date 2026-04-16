@@ -216,7 +216,7 @@ async function getDetails(ids){
 
       const chunk = clean.slice(i,i+50);
 console.log("CHUNK:", chunk);
-console.log("VIDEOS RESPONSE:", data);
+
 
       const url =
         `https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails&id=${chunk.join(",")}&key=${API_KEY}`;
