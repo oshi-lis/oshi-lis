@@ -62,23 +62,6 @@ body {
   margin-top: 15px;
 }
 
-/* ===== アーカイブUI ===== */
-.header-row{
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  margin-bottom:10px;
-}
-
-.refresh-btn{
-  font-size:12px;
-  cursor:pointer;
-  background:#eee;
-  border:none;
-  padding:4px 8px;
-  border-radius:6px;
-}
-
 .video-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -88,12 +71,6 @@ body {
 .thumb img {
   width: 100%;
   border-radius: 8px;
-}
-
-.thumb a {
-  color: #222;
-  text-decoration: none;
-  font-size: 12px;
 }
 
 .pagination {
@@ -146,8 +123,6 @@ body {
 const CHANNEL_ID = "UCo2N7C-Z91waaR6fL3LL_jw";
 const API_KEY = "AIzaSyDNqDI1bIEQpWahutCP_w3QpLoQvdcde78";
 
-const CACHE_KEY = "kaida_cache_v2";
-
 const data = {
   goods: ["誕生日グッズ2024","アクリルスタンド"],
   song: ["アニソン縛り歌枠","深夜歌枠"],
@@ -164,8 +139,6 @@ function showTab(e,type){
   document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
   e.target.classList.add("active");
 
-  localStorage.setItem("activeTab", type);
-
   const el = document.getElementById("content");
 
   if(type==="archive"){
@@ -179,87 +152,39 @@ function showTab(e,type){
     "</ul>";
 }
 
-/* ===== duration ===== */
-function parseDuration(d){
-  if(!d) return 0;
-  const h=d.match(/(\d+)H/);
-  const m=d.match(/(\d+)M/);
-  const s=d.match(/(\d+)S/);
-  return (Number(h?.[1]||0)*3600)+(Number(m?.[1]||0)*60)+Number(s?.[1]||0);
-}
+/* ===== fetch安全版 ===== */
+async function getAllVideos(){
 
-/* ===== fetch ===== */
-async function getAllVideos(limit=100){
+  const el = document.getElementById("content");
 
-  const ch = await fetch(
-    `https://www.googleapis.com/youtube/v3/channels?part=contentDetails&id=${CHANNEL_ID}&key=${API_KEY}`
-  ).then(r=>r.json());
+  try{
 
-  const uploads = ch.items[0].contentDetails.relatedPlaylists.uploads;
-
-  let all=[];
-  let token="";
-
-  while(true){
-
-    let url = `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet,contentDetails&playlistId=${uploads}&maxResults=50&key=${API_KEY}`;
-    if(token) url += `&pageToken=${token}`;
-
-    const res = await fetch(url).then(r=>r.json());
-
-    all = all.concat(res.items||[]);
-
-    if(all.length>=limit) break;
-    if(!res.nextPageToken) break;
-
-    token=res.nextPageToken;
-  }
-
-  return all;
-}
-
-async function getDetails(ids){
-
-  let all=[];
-
-  for(let i=0;i<ids.length;i+=50){
-    const chunk = ids.slice(i,i+50);
-
-    const res = await fetch(
-      `https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails&id=${chunk.join(",")}&key=${API_KEY}`
+    const ch = await fetch(
+      `https://www.googleapis.com/youtube/v3/channels?part=contentDetails&id=${CHANNEL_ID}&key=${API_KEY}`
     ).then(r=>r.json());
 
-    all = all.concat(res.items||[]);
+    if(!ch.items || !ch.items.length){
+      el.innerHTML = "❌ チャンネル取得失敗";
+      return [];
+    }
+
+    const uploads = ch.items?.[0]?.contentDetails?.relatedPlaylists?.uploads;
+
+    if(!uploads){
+      el.innerHTML = "❌ uploads取得失敗";
+      return [];
+    }
+
+    const res = await fetch(
+      `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet,contentDetails&playlistId=${uploads}&maxResults=50&key=${API_KEY}`
+    ).then(r=>r.json());
+
+    return res.items || [];
+
+  }catch(e){
+    el.innerHTML = "❌ 通信エラー";
+    return [];
   }
-
-  return all;
-}
-
-/* ===== ★分類（A仕様復元） ===== */
-function classify(videos){
-
-  let g = {
-    live:[],
-    song:[],
-    original:[],
-    clip:[],
-    short:[]
-  };
-
-  videos.forEach(v=>{
-
-    const id = v.id;
-    const title = v.snippet.title || "";
-    const sec = parseDuration(v.contentDetails?.duration);
-
-    if(title.includes("切り抜き")) return g.clip.push(v);
-    if(title.includes("オリジナル") || title.includes("試聴")) return g.original.push(v);
-    if(title.includes("歌ってみた")) return g.song.push(v);
-    if(title.includes("配信") || title.includes("雑談") || sec >= 1800) return g.live.push(v);
-    if(sec > 0 && sec <= 60) return g.short.push(v);
-  });
-
-  return g;
 }
 
 /* ===== アーカイブロード ===== */
@@ -268,13 +193,16 @@ async function loadArchive(){
   const el = document.getElementById("content");
   el.innerHTML = "loading...";
 
-  const list = await getAllVideos(100);
-  const ids = list.map(v=>v.snippet.resourceId.videoId);
-  videos = await getDetails(ids);
+  const list = await getAllVideos();
 
-  videos = classify(videos).live;
+  if(!list.length){
+    return;
+  }
 
-  localStorage.setItem(CACHE_KEY, JSON.stringify(videos));
+  videos = list.map(v => ({
+    id: v?.snippet?.resourceId?.videoId,
+    title: v?.snippet?.title
+  })).filter(v => v.id);
 
   currentPage = 1;
   renderArchive();
@@ -291,17 +219,12 @@ function renderArchive(){
   const totalPages = Math.ceil(videos.length/perPage);
 
   el.innerHTML = `
-    <div class="header-row">
-      <h3>配信アーカイブ</h3>
-      <button class="refresh-btn" onclick="refreshArchive()">🔄更新</button>
-    </div>
-
     <div class="video-grid">
       ${pageItems.map(v=>`
         <div class="thumb">
           <a href="https://www.youtube.com/watch?v=${v.id}" target="_blank">
             <img src="https://i.ytimg.com/vi/${v.id}/hqdefault.jpg">
-            <div>${v.snippet.title}</div>
+            <div>${v.title}</div>
           </a>
         </div>
       `).join("")}
@@ -310,28 +233,19 @@ function renderArchive(){
     <div class="pagination">
       ${Array.from({length: totalPages},(_,i)=>`
         <div class="page-btn ${i+1===currentPage?'active':''}"
-             onclick="changePage(${i+1})">${i+1 === totalPages ? (i+1+"〜") : i+1}</div>
+             onclick="changePage(${i+1})">${i+1}</div>
       `).join("")}
     </div>
   `;
 }
 
-/* ===== ページ操作 ===== */
 function changePage(p){
   currentPage = p;
   renderArchive();
 }
 
-/* ===== 更新 ===== */
-function refreshArchive(){
-  localStorage.removeItem(CACHE_KEY);
-  loadArchive();
-}
-
 /* ===== 初期 ===== */
-const saved = localStorage.getItem("activeTab") || "goods";
-const target = document.querySelector(`.tab[onclick*="${saved}"]`);
-showTab({target}, saved);
+showTab({target:document.querySelector(".tab")}, "goods");
 
 </script>
 
