@@ -353,6 +353,33 @@ const target = document.querySelector(`.tab[onclick*="${saved}"]`);
 
 showTab({target}, saved);
 
+/* ===== 手動更新 ===== */
+async function forceUpdate(){
+
+  const el = document.getElementById("content");
+  el.innerHTML = "更新中...";
+
+  const list = await getAllVideos();
+
+  const ids = list
+    .map(v => v?.snippet?.resourceId?.videoId)
+    .filter(Boolean);
+
+  const newVideos = await getDetails(ids);
+
+  cache.videos = newVideos;
+  cache.lastUpdated = Date.now();
+
+  cache.videoMap = {};
+  newVideos.forEach(v => {
+    cache.videoMap[v.id] = v;
+  });
+
+  videos = newVideos;
+  currentPage = 1;
+  render();
+}
+
 </script>
 
 </body>
