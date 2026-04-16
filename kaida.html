@@ -266,6 +266,25 @@ function render(){
   console.log("VIDEOS:", videos);
 
   const el = document.getElementById("content");
+const groups = {
+  live: [],
+  song: [],
+  original: [],
+  clip: [],
+  short: []
+};
+
+videos.forEach(v => {
+  const title = (v.snippet?.title || "").toLowerCase();
+
+  if(title.includes("切り抜き")) return groups.clip.push(v);
+  if(title.includes("歌ってみた") || title.includes("cover")) return groups.song.push(v);
+  if(title.includes("オリジナル") || title.includes("mv")) return groups.original.push(v);
+  if(title.includes("short")) return groups.short.push(v);
+
+  return groups.live.push(v);
+});
+console.log("分類結果", groups);
 
   const start = (currentPage - 1) * perPage;
   const pageItems = videos.slice(start, start + perPage);
