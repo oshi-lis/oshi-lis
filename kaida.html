@@ -205,17 +205,27 @@ async function getDetails(ids){
 
     const clean = (ids || []).filter(Boolean);
 
+    if(clean.length === 0){
+      console.log("IDS EMPTY");
+      return [];
+    }
+
     let all = [];
 
     for(let i=0;i<clean.length;i+=50){
 
       const chunk = clean.slice(i,i+50);
 
-      const res = await fetch(
-        `https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails&id=${chunk.join(",")}&key=${API_KEY}`
-      ).then(r=>r.json());
+      const url =
+        `https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails&id=${chunk.join(",")}&key=${API_KEY}`;
 
-      all = all.concat(res.items || []);
+      const res = await fetch(url);
+
+      const data = await res.json();
+
+      console.log("VIDEOS API RESULT:", data);
+
+      all = all.concat(data.items || []);
     }
 
     return all;
