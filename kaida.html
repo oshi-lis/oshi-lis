@@ -250,21 +250,40 @@ function shouldUpdate(){
 async function loadArchive(){
 
   const el = document.getElementById("content");
+
+  // キャッシュがあって、1日以内ならそれ使う
+  if(cache.videos.length > 0 && !shouldUpdate()){
+    videos = cache.videos;
+    currentPage = 1;
+    render();
+    return;
+  }
+
   el.innerHTML = "loading...";
 
   const list = await getAllVideos();
 
   const ids = list
-  .map(v => v?.snippet?.resourceId?.videoId)
-  .filter(Boolean);
+    .map(v => v?.snippet?.resourceId?.videoId)
+    .filter(Boolean);
 
-  videos = await getDetails(ids);
+  const newVideos = await getDetails(ids);
 
-  if(videos.length === 0){
-    el.innerHTML = "データ取得できませんでした（API or 制限）";
+  if(newVideos.length === 0){
+    el.innerHTML = "取得失敗";
     return;
   }
 
+  // キャッシュ保存
+  cache.videos = newVideos;
+  cache.lastUpdated = Date.now();
+
+  cache.videoMap = {};
+  newVideos.forEach(v => {
+    cache.videoMap[v.id] = v;
+  });
+
+  videos = newVideos;
   currentPage = 1;
   render();
 }
