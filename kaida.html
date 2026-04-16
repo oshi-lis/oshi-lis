@@ -220,7 +220,6 @@ async function getDetails(ids){
         `https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails&id=${chunk.join(",")}&key=${API_KEY}`;
 
       const res = await fetch(url);
-
       const data = await res.json();
 
       console.log("VIDEOS API RESULT:", data);
@@ -235,7 +234,6 @@ async function getDetails(ids){
     return [];
   }
 }
-
 /* ===== アーカイブ ===== */
 async function loadArchive(){
 
