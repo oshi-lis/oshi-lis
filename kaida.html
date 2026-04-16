@@ -246,8 +246,8 @@ async function loadArchive(){
   const list = await getAllVideos();
 
   const ids = list
-    .map(v => v?.contentDetails?.videoId || v?.snippet?.resourceId?.videoId)
-    .filter(Boolean);
+  .map(v => v?.snippet?.resourceId?.videoId)
+  .filter(Boolean);
 
   videos = await getDetails(ids);
 
