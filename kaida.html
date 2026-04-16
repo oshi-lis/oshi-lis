@@ -225,7 +225,7 @@ console.log("VIDEOS RESPONSE:", data);
       const res = await fetch(url);
       const data = await res.json();
 
-      console.log("VIDEOS API RESULT:", data);
+console.log("VIDEO API FULL RESPONSE:", data);
 
       all = all.concat(data.items || []);
     }
