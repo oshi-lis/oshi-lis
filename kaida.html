@@ -143,7 +143,7 @@ body {
 
 <script>
 
-const CHANNEL_ID = "UCo2N7C-Z91waaR6lF3LL_jw";
+const CHANNEL_ID = "UCo2N7C-Z91waaR6fL3LL_jw";
 const API_KEY = "AIzaSyDNqDI1bIEQpWahutCP_w3QpLoQvdcde78";
 
 const CACHE_KEY = "kaida_cache_v2";
@@ -163,6 +163,8 @@ function showTab(e,type){
 
   document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
   e.target.classList.add("active");
+
+  localStorage.setItem("activeTab", type);
 
   const el = document.getElementById("content");
 
@@ -233,22 +235,44 @@ async function getDetails(ids){
   return all;
 }
 
+/* ===== ★分類（A仕様復元） ===== */
+function classify(videos){
+
+  let g = {
+    live:[],
+    song:[],
+    original:[],
+    clip:[],
+    short:[]
+  };
+
+  videos.forEach(v=>{
+
+    const id = v.id;
+    const title = v.snippet.title || "";
+    const sec = parseDuration(v.contentDetails?.duration);
+
+    if(title.includes("切り抜き")) return g.clip.push(v);
+    if(title.includes("オリジナル") || title.includes("試聴")) return g.original.push(v);
+    if(title.includes("歌ってみた")) return g.song.push(v);
+    if(title.includes("配信") || title.includes("雑談") || sec >= 1800) return g.live.push(v);
+    if(sec > 0 && sec <= 60) return g.short.push(v);
+  });
+
+  return g;
+}
+
 /* ===== アーカイブロード ===== */
 async function loadArchive(){
 
   const el = document.getElementById("content");
-
   el.innerHTML = "loading...";
-
-  const cache = localStorage.getItem(CACHE_KEY);
-
-  if(cache){
-    videos = JSON.parse(cache);
-  }
 
   const list = await getAllVideos(100);
   const ids = list.map(v=>v.snippet.resourceId.videoId);
   videos = await getDetails(ids);
+
+  videos = classify(videos).live;
 
   localStorage.setItem(CACHE_KEY, JSON.stringify(videos));
 
@@ -264,15 +288,6 @@ function renderArchive(){
   const start = (currentPage-1)*perPage;
   const pageItems = videos.slice(start,start+perPage);
 
-  const render = arr => arr.map(v=>`
-    <div class="thumb">
-      <a href="https://www.youtube.com/watch?v=${v.id}" target="_blank">
-        <img src="https://i.ytimg.com/vi/${v.id}/hqdefault.jpg">
-        <div>${v.snippet.title}</div>
-      </a>
-    </div>
-  `).join("");
-
   const totalPages = Math.ceil(videos.length/perPage);
 
   el.innerHTML = `
@@ -281,12 +296,21 @@ function renderArchive(){
       <button class="refresh-btn" onclick="refreshArchive()">🔄更新</button>
     </div>
 
-    <div class="video-grid">${render(pageItems)}</div>
+    <div class="video-grid">
+      ${pageItems.map(v=>`
+        <div class="thumb">
+          <a href="https://www.youtube.com/watch?v=${v.id}" target="_blank">
+            <img src="https://i.ytimg.com/vi/${v.id}/hqdefault.jpg">
+            <div>${v.snippet.title}</div>
+          </a>
+        </div>
+      `).join("")}
+    </div>
 
     <div class="pagination">
       ${Array.from({length: totalPages},(_,i)=>`
         <div class="page-btn ${i+1===currentPage?'active':''}"
-             onclick="changePage(${i+1})">${i+1}</div>
+             onclick="changePage(${i+1})">${i+1 === totalPages ? (i+1+"〜") : i+1}</div>
       `).join("")}
     </div>
   `;
