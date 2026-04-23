@@ -423,7 +423,12 @@ const total = Math.ceil(targetList.length / perPage);
     </div>
   `;
 }
-
+/* ===== 動作の切り替え ===== */
+function setFilter(type){
+  currentFilter = type;
+  currentPage = 1;
+  render();
+}
 /* ===== ページ ===== */
 function go(p){
   currentPage = p;
