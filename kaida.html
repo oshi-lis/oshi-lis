@@ -266,6 +266,9 @@ async function loadArchive(){
 
   const list = await getAllVideos();
 
+console.log("STEP1 list length:", list.length);
+console.log("STEP1 first item:", list[0]);
+
   const ids = list
     .map(v => v?.snippet?.resourceId?.videoId)
     .filter(Boolean);
