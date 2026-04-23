@@ -400,15 +400,22 @@ const total = Math.ceil(list.length / perPage);
       </div>
     `).join("")}
   </div>
+<div class="pagination">
+  <div class="page-btn" onclick="go(currentPage - 1)">
+    ◀ 前へ
+  </div>
 
- <div class="pagination">
-  ${Array.from({length: Math.min(total, 10)}, (_, i) => {
+  ${Array.from({length: total}, (_, i) => {
     const p = i + 1;
     return `
       <div class="page-btn ${p === currentPage ? 'active' : ''}"
         onclick="go(${p})">${p}</div>
     `;
   }).join("")}
+
+  <div class="page-btn" onclick="go(currentPage + 1)">
+    次へ ▶
+  </div>
 </div>
 `;
 }
@@ -420,6 +427,11 @@ function setFilter(type){
 }
 /* ===== ページ ===== */
 function go(p){
+  const total = Math.ceil(videos.length / perPage);
+
+  if(p < 1) p = 1;
+  if(p > total) p = total;
+
   currentPage = p;
   render();
 }
