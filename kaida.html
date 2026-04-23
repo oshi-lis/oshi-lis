@@ -407,23 +407,28 @@ const total = Math.ceil(list.length / perPage);
     const total = Math.ceil(list.length / perPage);
     const pages = [];
 
+    const range = 3; // ←ここで「前後どれくらい見せるか」
+
     pages.push(1);
 
-    if(currentPage > 3) pages.push("...");
+    if (currentPage - range > 2) pages.push("...");
 
-    for(let i = currentPage - 1; i <= currentPage + 1; i++){
-      if(i > 1 && i < total) pages.push(i);
+    for (let i = currentPage - range; i <= currentPage + range; i++) {
+      if (i > 1 && i < total) pages.push(i);
     }
 
-    if(currentPage < total - 2) pages.push("...");
+    if (currentPage + range < total - 1) pages.push("...");
 
-    if(total > 1) pages.push(total);
+    if (total > 1) pages.push(total);
 
-    return pages.map(p => {
-      if(p === "...") return `<div class="page-btn">...</div>`;
-      return `<div class="page-btn ${p === currentPage ? 'active' : ''}"
-        onclick="go(${p})">${p}</div>`;
-    }).join("");
+    return pages
+      .filter((v, i, arr) => arr.indexOf(v) === i)
+      .map(p => {
+        if (p === "...") return `<div class="page-btn">...</div>`;
+        return `<div class="page-btn ${p === currentPage ? 'active' : ''}"
+          onclick="go(${p})">${p}</div>`;
+      })
+      .join("");
   })()}
 
   <div class="page-btn" onclick="go(currentPage + 1)">▶</div>
