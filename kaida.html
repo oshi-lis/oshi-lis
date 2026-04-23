@@ -277,6 +277,8 @@ console.log("STEP2 ids length:", ids.length);
 
   const newVideos = await getDetails(ids);
 
+console.log("STEP3 videos length:", newVideos.length);
+
   if(newVideos.length === 0){
     el.innerHTML = "取得失敗";
     return;
