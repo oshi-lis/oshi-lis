@@ -222,7 +222,6 @@ while(true){
     return all;
 
   } catch (e) {
-    console.log("API ERROR:", e);
     return [];
   }
 }
@@ -235,7 +234,7 @@ async function getDetails(ids){
     const clean = (ids || []).filter(Boolean);
 
     if(clean.length === 0){
-      console.log("IDS EMPTY");
+     
       return [];
     }
 
@@ -244,7 +243,6 @@ async function getDetails(ids){
     for(let i=0;i<clean.length;i+=50){
 
       const chunk = clean.slice(i,i+50);
-console.log("CHUNK:", chunk);
 
 
       const url =
@@ -253,7 +251,6 @@ console.log("CHUNK:", chunk);
       const res = await fetch(url);
       const data = await res.json();
 
-console.log("VIDEO API FULL RESPONSE:", data);
 
       all = all.concat(data.items || []);
     }
@@ -261,7 +258,6 @@ console.log("VIDEO API FULL RESPONSE:", data);
     return all;
 
   } catch (e) {
-    console.log("DETAIL ERROR:", e);
     return [];
   }
 /* ===== キャッシュ更新 ===== */
@@ -321,7 +317,6 @@ console.log("STEP3 videos length:", newVideos.length);
 
 videos.forEach(v => {
   if ((v.snippet?.title || "").toLowerCase().includes("covered by")) {
-    console.log("FOUND:", v.snippet.title);
   }
 });
 
@@ -333,8 +328,6 @@ render();
 function render(){
 
 if(!currentFilter) currentFilter = "all";
-  console.log("RENDER ENTERED");
-  console.log("VIDEOS:", videos);
 
   const el = document.getElementById("content");
 const groups = {
@@ -376,9 +369,6 @@ videos.forEach(v => {
   // ⑤ それ以外
   return groups.live.push(v);
 });
-console.log("分類結果", groups);
-console.log("歌の数:", groups.song.length);
-console.log("SONG TITLES:", groups.song.map(v => v.snippet.title));
   const start = (currentPage - 1) * perPage;
   let list = videos;
 
