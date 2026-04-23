@@ -323,6 +323,7 @@ videos.forEach(v => {
   return groups.live.push(v);
 });
 console.log("分類結果", groups);
+console.log("歌の数:", groups.song.length);
 
   const start = (currentPage - 1) * perPage;
   const targetList = groups.song;
