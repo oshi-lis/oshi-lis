@@ -319,7 +319,7 @@ videos.forEach(v => {
 console.log("分類結果", groups);
 
   const start = (currentPage - 1) * perPage;
-  const targetList = groups.live;
+  const targetList = groups.song;
 
 const pageItems = targetList.slice(start, start + perPage);
 const total = Math.ceil(targetList.length / perPage);
