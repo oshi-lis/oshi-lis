@@ -180,21 +180,20 @@ async function getAllVideos(){
     }
 
     let all = [];
-    let token = "";
+let token = "";
 
-    for(let i = 0; i < 20; i++){
+while(true){
 
-      let url = `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet,contentDetails&playlistId=${uploads}&maxResults=50&key=${API_KEY}`;
-      if(token) url += `&pageToken=${token}`;
+  let url = `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet,contentDetails&playlistId=${uploads}&maxResults=50&key=${API_KEY}`;
+  if(token) url += `&pageToken=${token}`;
 
-      const res = await fetch(url).then(r=>r.json());
+  const res = await fetch(url).then(r=>r.json());
 
-      all = all.concat(res.items || []);
+  all = all.concat(res.items || []);
 
-      if(!res.nextPageToken) break;
-      token = res.nextPageToken;
-    }
-
+  if(!res.nextPageToken) break;
+  token = res.nextPageToken;
+}
     return all;
 
   } catch (e) {
