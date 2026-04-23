@@ -401,15 +401,33 @@ const total = Math.ceil(list.length / perPage);
     `).join("")}
   </div>
 <div class="pagination">
-  <div class="page-btn" onclick="go(currentPage - 1)">
-    ◀ 前へ
-  </div>
+  <div class="page-btn" onclick="go(currentPage - 1)">◀</div>
 
-  ${Array.from({length: total}, (_, i) => {
-    const p = i + 1;
-    return `
-      <div class="page-btn ${p === currentPage ? 'active' : ''}"
-        onclick="go(${p})">${p}</div>
+  ${(() => {
+    const total = Math.ceil(list.length / perPage);
+    const pages = [];
+
+    pages.push(1);
+
+    if(currentPage > 3) pages.push("...");
+
+    for(let i = currentPage - 1; i <= currentPage + 1; i++){
+      if(i > 1 && i < total) pages.push(i);
+    }
+
+    if(currentPage < total - 2) pages.push("...");
+
+    if(total > 1) pages.push(total);
+
+    return pages.map(p => {
+      if(p === "...") return `<div class="page-btn">...</div>`;
+      return `<div class="page-btn ${p === currentPage ? 'active' : ''}"
+        onclick="go(${p})">${p}</div>`;
+    }).join("");
+  })()}
+
+  <div class="page-btn" onclick="go(currentPage + 1)">▶</div>
+</div>
     `;
   }).join("")}
 
