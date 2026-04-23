@@ -370,15 +370,10 @@ videos.forEach(v => {
   return groups.live.push(v);
 });
   const start = (currentPage - 1) * perPage;
-  let list = videos;
+ let list = videos;
 
 if(currentFilter && currentFilter !== "all"){
-  const filtered = groups[currentFilter];
-
-  list = [
-    ...filtered,
-    ...videos.filter(v => !filtered.includes(v))
-  ];
+  list = groups[currentFilter];
 }
 
 const targetList = list;
