@@ -354,7 +354,7 @@ console.log("分類結果", groups);
 console.log("歌の数:", groups.song.length);
 console.log("SONG TITLES:", groups.song.map(v => v.snippet.title));
   const start = (currentPage - 1) * perPage;
-  const targetList = groups.song;
+  const targetList = videos;
 
 const pageItems = targetList.slice(start, start + perPage);
 const total = Math.ceil(targetList.length / perPage);
