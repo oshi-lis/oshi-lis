@@ -325,12 +325,18 @@ videos.forEach(v => {
 
   // ① 歌（最優先）
   if (
+  (
     title.includes("歌ってみた") ||
     title.includes("歌みた") ||
     title.includes("cover") ||
     title.includes("covered by") ||
     title.includes("カバー")
-  ) return groups.song.push(v);
+  )
+  &&
+  !title.includes("歌枠") &&
+  !title.includes("配信") &&
+  !title.includes("弾き語り")
+) return groups.song.push(v);
 
   // ② 切り抜き
   if(title.includes("切り抜き")) return groups.clip.push(v);
