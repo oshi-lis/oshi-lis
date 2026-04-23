@@ -387,6 +387,32 @@ const pageItems = list.slice(start, start + perPage);
 const total = Math.ceil(targetList.length / perPage);
 
   el.innerHTML = `
+  <div class="filters">
+    <button onclick="setFilter('all')">配信アーカイブ</button>
+    <button onclick="setFilter('original')">オリジナル曲</button>
+    <button onclick="setFilter('song')">歌ってみた</button>
+    <button onclick="setFilter('clip')">切り抜き</button>
+    <button onclick="setFilter('short')">ショート</button>
+  </div>
+
+  <div class="video-grid">
+    ${pageItems.map(v => `
+      <div class="thumb">
+        <a href="https://www.youtube.com/watch?v=${v.id}" target="_blank">
+          <img src="https://i.ytimg.com/vi/${v.id}/hqdefault.jpg">
+          <div>${v.snippet?.title || "no title"}</div>
+        </a>
+      </div>
+    `).join("")}
+  </div>
+
+  <div class="pagination">
+    ${Array.from({length: total}, (_, i) => `
+      <div class="page-btn ${i + 1 === currentPage ? 'active' : ''}"
+        onclick="go(${i + 1})">${i + 1}</div>
+    `).join("")}
+  </div>
+`;
     <div class="video-grid">
       ${pageItems.map(v => `
         <div class="thumb">
