@@ -401,12 +401,15 @@ const total = Math.ceil(list.length / perPage);
     `).join("")}
   </div>
 
-  <div class="pagination">
-    ${Array.from({length: total}, (_, i) => `
-      <div class="page-btn ${i + 1 === currentPage ? 'active' : ''}"
-        onclick="go(${i + 1})">${i + 1}</div>
-    `).join("")}
-  </div>
+ <div class="pagination">
+  ${Array.from({length: Math.min(total, 10)}, (_, i) => {
+    const p = i + 1;
+    return `
+      <div class="page-btn ${p === currentPage ? 'active' : ''}"
+        onclick="go(${p})">${p}</div>
+    `;
+  }).join("")}
+</div>
 `;
 }
 /* ===== 動作の切り替え ===== */
