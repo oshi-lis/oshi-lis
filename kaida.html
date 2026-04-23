@@ -368,7 +368,7 @@ if(currentFilter && currentFilter !== "all"){
 
 const targetList = list;
 
-const pageItems = targetList.slice(start, start + perPage);
+const pageItems = list.slice(start, start + perPage);
 const total = Math.ceil(targetList.length / perPage);
 
   el.innerHTML = `
