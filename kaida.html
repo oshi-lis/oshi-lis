@@ -310,7 +310,12 @@ videos.forEach(v => {
   const title = (v.snippet?.title || "").toLowerCase();
 
   if(title.includes("切り抜き")) return groups.clip.push(v);
-  if(title.includes("歌ってみた") || title.includes("cover")) return groups.song.push(v);
+  if(
+  title.includes("歌ってみた") ||
+  title.includes("歌みた") ||
+  title.includes("cover") ||
+  title.includes("カバー")
+) return groups.song.push(v);
   if(title.includes("オリジナル") || title.includes("mv")) return groups.original.push(v);
   if(title.includes("short")) return groups.short.push(v);
 
