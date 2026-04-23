@@ -254,9 +254,11 @@ async function loadArchive(){
   // キャッシュがあって、1日以内ならそれ使う
   if(cache.videos.length > 0 && !shouldUpdate()){
   el.innerHTML = "キャッシュ表示中";
-  videos = cache.videos;
-  currentPage = 1;
-  render();
+  setTimeout(() => {
+    videos = cache.videos;
+    currentPage = 1;
+    render();
+  }, 500);
   return;
 }
 
