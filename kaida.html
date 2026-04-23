@@ -182,7 +182,7 @@ async function getAllVideos(){
     let all = [];
     let token = "";
 
-    for(let i = 0; i < 10; i++){
+    for(let i = 0; i < 20; i++){
 
       let url = `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet,contentDetails&playlistId=${uploads}&maxResults=50&key=${API_KEY}`;
       if(token) url += `&pageToken=${token}`;
@@ -329,8 +329,7 @@ videos.forEach(v => {
     title.includes("歌みた") ||
     title.includes("cover") ||
     title.includes("covered by") ||
-    title.includes("カバー")||
-    title.includes(" / ")
+    title.includes("カバー")
   ) return groups.song.push(v);
 
   // ② 切り抜き
