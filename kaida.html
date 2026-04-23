@@ -379,7 +379,7 @@ if(currentFilter && currentFilter !== "all"){
 const targetList = list;
 
 const pageItems = list.slice(start, start + perPage);
-const total = Math.ceil(targetList.length / perPage);
+const total = Math.ceil(list.length / perPage);
 
   el.innerHTML = `
   <div class="filters">
