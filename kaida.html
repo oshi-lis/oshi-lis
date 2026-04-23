@@ -273,6 +273,8 @@ console.log("STEP1 first item:", list[0]);
     .map(v => v?.snippet?.resourceId?.videoId)
     .filter(Boolean);
 
+console.log("STEP2 ids length:", ids.length);
+
   const newVideos = await getDetails(ids);
 
   if(newVideos.length === 0){
