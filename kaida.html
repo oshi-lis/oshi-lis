@@ -287,6 +287,15 @@ async function loadArchive(){
   });
 
   videos = newVideos;
+
+videos.forEach(v => {
+  if ((v.snippet?.title || "").toLowerCase().includes("covered by")) {
+    console.log("FOUND:", v.snippet.title);
+  }
+});
+
+currentPage = 1;
+render();
   currentPage = 1;
   render();
 }
